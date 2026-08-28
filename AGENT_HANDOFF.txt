@@ -1,0 +1,81 @@
+================================================================================
+QORA MOBILE - AGENT HANDOFF & PROJECT CONTEXT
+================================================================================
+Date: 2026-08-28
+Current Git Branch: mobile-migration
+Framework: Expo SDK 57 (~57.0.18), React Native 0.86.3, React 19.2.3, Expo Router
+Styling: NativeWind v4 / Tailwind CSS
+Backend: Supabase (Auth + PostgreSQL database)
+
+--------------------------------------------------------------------------------
+1. PROJECT MASTER ROADMAP STATUS
+--------------------------------------------------------------------------------
+[x] 1. Mobile UI (Scaffolded with Expo Router tabs & NativeWind)
+[x] 2. Accounts (Supabase Auth fully implemented & verified)
+[ ] 3. Save text  <--- *** YOU ARE HERE / NEXT STEP TO EXECUTE ***
+[ ] 4. Voice -> text
+[ ] 5. Knowledge bank
+[ ] 6. Semantic search
+[ ] 7. AI answers using memories
+[ ] 8. Save AI conversations
+[ ] 9. Feed useful AI conversations back into memory
+[ ] 10. Privacy + testing
+[ ] 11. App Store beta
+
+--------------------------------------------------------------------------------
+2. WHAT HAS BEEN BUILT & CONFIGURED SO FAR
+--------------------------------------------------------------------------------
+- Supabase Integration (src/lib/supabase.ts):
+  * Upgraded from direct SecureStore to LargeSecureStore: uses @react-native-async-storage/async-storage
+    encrypted via aes-js and expo-secure-store for the encryption key (bypassing the 2048-byte limit crash).
+  * WebStorageAdapter implemented to support Server-Side Rendering / Metro web bundling without
+    throwing "ReferenceError: localStorage is not defined".
+  * AppState auto-refresh listener attached for mobile native platforms.
+
+- Authentication & Global State (src/providers/AuthProvider.tsx):
+  * React Context provider tracking session, user, and isInitialized.
+  * Exports useAuth() hook for consumption across components.
+
+- Route Protection (app/_layout.tsx & app/index.tsx):
+  * Dynamic route guarding using useSegments() and useRouter().
+  * Unauthenticated users are redirected to /(auth)/sign-in.
+  * Authenticated users are redirected to /(tabs)/home.
+
+- Auth Screens & Navigation:
+  * app/(auth)/_layout.tsx: Stack layout for auth screens.
+  * app/(auth)/sign-up.tsx: Email & password validation, calls supabase.auth.signUp().
+  * app/(auth)/sign-in.tsx: Connected to supabase.auth.signInWithPassword().
+  * app/(tabs)/settings.tsx: Shows current user email and provides functional Sign Out modal.
+
+- Environment Variables & Database:
+  * .env file in root contains valid EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY.
+  * Verified connection to Supabase cloud database (haaczqmyqgyqwcuvykuf.supabase.co).
+  * Existing tables in cloud: 'journal_entries', 'profiles', 'ocr_usage_events'.
+  * .gitignore updated so .env is never committed; !.env.example is tracked.
+  * Full TypeScript check (npx tsc --noEmit) passes with 0 errors.
+
+--------------------------------------------------------------------------------
+3. USER'S CURRENT ENVIRONMENT & TESTING SETUP
+--------------------------------------------------------------------------------
+- OS: Windows
+- Testing Device: Physical iPhone (iOS)
+- Important Note on Expo Go on iOS:
+  * Apple has frozen the public App Store version of Expo Go at SDK 54.
+  * Because this project uses Expo SDK 57, scanning with the App Store's Expo Go app
+    produces a version mismatch error.
+  * To test on physical iPhone: The user can install the SDK 57 Expo Go build via
+    Safari at https://sign.expo.dev using their free Apple ID developer signing.
+  * Alternatively, running `npx expo start --web` launches the web preview immediately.
+
+--------------------------------------------------------------------------------
+4. EXACT NEXT STEP: "SAVE TEXT" MILESTONE
+--------------------------------------------------------------------------------
+When picking up the next task, build out Step 3 ("Save text"):
+1. Home Screen UI (app/(tabs)/home.tsx):
+   - Expand the "Type instead" flow so tapping it opens a text input/journaling modal or form.
+2. Journal Storage:
+   - Save user entries into Supabase's 'journal_entries' table:
+     Columns: user_id (auth.uid()), entry_date, responses (JSON), reflection_summary, source ('typed').
+3. History Screen (app/(tabs)/history.tsx):
+   - Query 'journal_entries' for the logged-in user and display past entries chronologically.
+================================================================================
