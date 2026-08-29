@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, Alert, Platform } from 'react-native';
 import { useAuth } from '../../src/providers/AuthProvider';
 import { supabase } from '../../src/lib/supabase';
 
@@ -7,25 +7,41 @@ export default function SettingsScreen() {
   const { user } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
 
-  const handleSignOut = async () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          setLoggingOut(true);
-          const { error } = await supabase.auth.signOut();
-          setLoggingOut(false);
-
-          if (error) {
-            Alert.alert('Error', error.message);
-          }
-          // AuthProvider listener will auto-route to /(auth)/sign-in
-        },
-      },
-    ]);
+  const performSignOut = async () => {
+    try {
+      setLoggingOut(true);
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        if (Platform.OS === 'web') {
+          window.alert(error.message);
+        } else {
+          Alert.alert('Error', error.message);
+        }
+      }
+    } catch (e: any) {
+      console.error('Sign out error:', e);
+    } finally {
+      setLoggingOut(false);
+    }
   };
+
+  const handleSignOut = () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to sign out?')) {
+        performSignOut();
+      }
+    } else {
+      Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: performSignOut,
+        },
+      ]);
+    }
+  };
+
 
   return (
     <View className="flex-1 bg-white dark:bg-black p-6 justify-between">
