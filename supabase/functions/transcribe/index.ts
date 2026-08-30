@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { encryptText } from "../shared/encryption.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,90 +8,83 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { entryId, audioPath } = await req.json();
-    
-    if (!entryId || !audioPath) {
-      throw new Error("Missing entryId or audioPath");
+    const { entryId, audioPath, encryptionKey } = await req.json();
+    if (!entryId || !audioPath || !encryptionKey) {
+      throw new Error("Missing entryId, audioPath, or encryptionKey");
     }
 
-    const groqApiKey = Deno.env.get('GROQ_API_KEY');
-    if (!groqApiKey) {
-      throw new Error("GROQ_API_KEY is not set. Please add it to Supabase secrets.");
-    }
-
-    // Create a Supabase client with the Auth context of the logged in user
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Update status to processing
-    await supabaseClient
-      .from('entries')
-      .update({ processing_status: 'processing' })
-      .eq('id', entryId);
-
-    // Download the audio file from Storage
-    const { data: audioData, error: downloadError } = await supabaseClient
+    // Download audio file from storage
+    const { data: fileData, error: downloadError } = await supabaseClient
       .storage
-      .from('media')
+      .from('audio_entries')
       .download(audioPath);
 
-    if (downloadError || !audioData) {
-      throw new Error("Failed to download audio file: " + (downloadError?.message || "Unknown error"));
+    if (downloadError || !fileData) {
+      throw new Error("Failed to download audio file: " + downloadError?.message);
     }
 
-    // Prepare FormData for Groq Whisper
+    // Call Groq Whisper API
     const formData = new FormData();
-    const ext = audioPath.split('.').pop() || 'webm';
-    formData.append("file", audioData, `audio.${ext}`);
-    formData.append("model", "whisper-large-v3"); // Groq's whisper model
+    formData.append('file', fileData, 'audio.m4a');
+    formData.append('model', 'whisper-large-v3-turbo');
 
-    // Call Groq API
-    const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
-      method: "POST",
+    const groqResponse = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
       headers: {
-        "Authorization": `Bearer ${groqApiKey}`,
+        'Authorization': `Bearer ${Deno.env.get('GROQ_API_KEY')}`
       },
-      body: formData,
+      body: formData
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Groq API error: ${response.status} ${errorText}`);
+    if (!groqResponse.ok) {
+      const errText = await groqResponse.text();
+      throw new Error("Groq API error: " + errText);
     }
 
-    const result = await response.json();
-    const transcribedText = result.text;
+    const groqData = await groqResponse.json();
+    const transcription = groqData.text;
 
-    // Update the database with the plaintext transcription
+    // Encrypt transcription
+    const encryptedContent = await encryptText(transcription, encryptionKey);
+
+    // Update entry with encrypted content
     const { error: updateError } = await supabaseClient
       .from('entries')
-      .update({ 
-        content: transcribedText,
-        processing_status: 'ready' 
+      .update({
+        encrypted_content: encryptedContent
       })
       .eq('id', entryId);
 
     if (updateError) {
-      throw updateError;
+      throw new Error("Failed to save encrypted transcription: " + updateError.message);
     }
 
-    // Return the plaintext to the client so it can display it immediately
-    return new Response(JSON.stringify({ text: transcribedText }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
+    // Trigger process-entry for embeddings
+    await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/process-entry`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ entryId, encryptionKey })
     });
 
-  } catch (error) {
-    console.error(error);
+    return new Response(JSON.stringify({ success: true, text: transcription }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (error: any) {
+    console.error("Transcription Error:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,

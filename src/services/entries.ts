@@ -1,15 +1,17 @@
 import { supabase } from '../lib/supabase';
+import { getLocalMEK, encryptText, decryptText } from '../lib/encryption';
 
 export type Entry = {
   id: string;
   user_id: string;
-  content: string; 
-  entry_type: 'voice' | 'text';
+  entry_type: 'text' | 'voice' | 'handwriting';
   audio_path: string | null;
-  processing_status?: string;
-  last_error?: string | null;
+  encrypted_content: string;
+  content: string; // Decrypted content for the UI
   created_at: string;
   updated_at: string;
+  processing_status: 'pending' | 'processing' | 'ready' | 'failed';
+  last_error?: string | null;
 };
 
 export async function markEntryFailed(id: string, errorMsg: string) {
@@ -24,39 +26,66 @@ export async function markEntryFailed(id: string, errorMsg: string) {
   if (error) console.error("Failed to mark entry as failed:", error);
 }
 
-export async function createTextEntry(content: string, userId: string) {
+export async function createTextEntry(text: string): Promise<Entry> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const mek = await getLocalMEK();
+  if (!mek) throw new Error('Encryption key not found. Please set up your recovery passphrase.');
+
+  const encryptedContent = await encryptText(text, mek);
+
   const { data, error } = await supabase
     .from('entries')
-    .insert([{ 
-      content: content, 
+    .insert({
+      user_id: user.id,
       entry_type: 'text',
-      user_id: userId,
-      processing_status: 'ready'
-    }])
+      encrypted_content: encryptedContent,
+      processing_status: 'pending'
+    })
     .select()
     .single();
-    
+
   if (error) throw error;
 
-  // Fire and forget background embedding generation
-  supabase.functions.invoke('process-entry', { body: { entryId: data.id } })
-    .catch((err) => markEntryFailed(data.id, err.message || JSON.stringify(err)));
+  // Trigger processing
+  supabase.functions.invoke('process-entry', {
+    body: { entryId: data.id, encryptionKey: mek }
+  }).catch((err) => markEntryFailed(data.id, err.message || JSON.stringify(err)));
 
-  return data as Entry;
+  return {
+    ...data,
+    content: text // Inject plaintext for immediate UI use
+  } as Entry;
 }
 
-export async function getUserEntries() {
-  const { data, error } = await supabase
+export async function getUserEntries(filterType?: string, filterStartDate?: string): Promise<Entry[]> {
+  let query = supabase
     .from('entries')
     .select('*')
     .order('created_at', { ascending: false });
-    
+
+  if (filterType && filterType !== 'all') {
+    query = query.eq('entry_type', filterType);
+  }
+  if (filterStartDate) {
+    query = query.gte('created_at', filterStartDate);
+  }
+
+  const { data, error } = await query;
+
   if (error) throw error;
-  
-  return data as Entry[];
+
+  const mek = await getLocalMEK();
+  if (!mek) throw new Error('Encryption key not found. Please set up your recovery passphrase.');
+
+  return await Promise.all(data.map(async entry => ({
+    ...entry,
+    content: entry.encrypted_content ? await decryptText(entry.encrypted_content, mek) : ''
+  }))) as Entry[];
 }
 
-export async function getFailedEntries() {
+export async function getFailedEntries(): Promise<Entry[]> {
   const { data, error } = await supabase
     .from('entries')
     .select('*')
@@ -65,29 +94,46 @@ export async function getFailedEntries() {
     
   if (error) throw error;
   
-  return data as Entry[];
+  const mek = await getLocalMEK();
+  if (!mek) throw new Error('Encryption key not found. Please set up your recovery passphrase.');
+
+  return await Promise.all(data.map(async entry => ({
+    ...entry,
+    content: entry.encrypted_content ? await decryptText(entry.encrypted_content, mek) : ''
+  }))) as Entry[];
 }
 
-export async function getUnindexedEntries() {
+export async function getUnindexedEntries(): Promise<Entry[]> {
   const { data, error } = await supabase
     .from('entries')
     .select('*')
     .is('whole_embedding', null)
-    .neq('content', '') 
+    .neq('encrypted_content', '') 
     .order('created_at', { ascending: false });
     
   if (error) throw error;
+  
+  const mek = await getLocalMEK();
+  if (!mek) throw new Error('Encryption key not found. Please set up your recovery passphrase.');
 
-  return data as Entry[];
+  return await Promise.all(data.map(async entry => ({
+    ...entry,
+    content: entry.encrypted_content ? await decryptText(entry.encrypted_content, mek) : ''
+  }))) as Entry[];
 }
 
-export async function updateEntry(id: string, content: string) {
+export async function updateEntry(id: string, text: string): Promise<Entry> {
+  const mek = await getLocalMEK();
+  if (!mek) throw new Error('Encryption key not found. Please set up your recovery passphrase.');
+
+  const encryptedContent = await encryptText(text, mek);
+
   const { data, error } = await supabase
     .from('entries')
     .update({ 
-      content: content,
-      processing_status: 'ready',
-      updated_at: new Date().toISOString()
+      encrypted_content: encryptedContent,
+      updated_at: new Date().toISOString(),
+      processing_status: 'pending' // Re-process if text changed
     })
     .eq('id', id)
     .select()
@@ -95,18 +141,31 @@ export async function updateEntry(id: string, content: string) {
 
   if (error) throw error;
 
-  // Fire and forget background embedding generation
-  supabase.functions.invoke('process-entry', { body: { entryId: data.id } })
-    .catch((err) => markEntryFailed(data.id, err.message || JSON.stringify(err)));
+  supabase.functions.invoke('process-entry', {
+    body: { entryId: id, encryptionKey: mek }
+  }).catch((err) => markEntryFailed(id, err.message || JSON.stringify(err)));
 
-  return data as Entry;
+  return {
+    ...data,
+    content: text
+  } as Entry;
 }
 
-export async function deleteEntry(id: string) {
+export async function deleteEntries(entries: Entry[]) {
+  const ids = entries.map(e => e.id);
+  const audioPaths = entries.map(e => e.audio_path).filter(Boolean) as string[];
+
+  // 1. Delete audio files from storage if any exist
+  if (audioPaths.length > 0) {
+    const { error: storageError } = await supabase.storage.from('audio_entries').remove(audioPaths);
+    if (storageError) console.error("Failed to delete audio files:", storageError);
+  }
+
+  // 2. Delete database rows
   const { error } = await supabase
     .from('entries')
     .delete()
-    .eq('id', id);
+    .in('id', ids);
 
   if (error) throw error;
 }
@@ -115,7 +174,7 @@ export async function createPendingVoiceEntry(userId: string, audioPath: string)
   const { data, error } = await supabase
     .from('entries')
     .insert([{ 
-      content: '', // Empty until transcribed
+      encrypted_content: '', // Empty until transcribed
       entry_type: 'voice',
       user_id: userId,
       audio_path: audioPath,
@@ -125,12 +184,15 @@ export async function createPendingVoiceEntry(userId: string, audioPath: string)
     .single();
     
   if (error) throw error;
-  return data as Entry;
+  return { ...data, content: '' } as Entry;
 }
 
 export async function processTranscription(entryId: string, audioPath: string) {
+  const mek = await getLocalMEK();
+  if (!mek) throw new Error('Encryption key not found. Please set up your recovery passphrase.');
+
   const { data, error } = await supabase.functions.invoke('transcribe', {
-    body: { entryId, audioPath },
+    body: { entryId, audioPath, encryptionKey: mek },
   });
   
   if (error) {
@@ -138,16 +200,17 @@ export async function processTranscription(entryId: string, audioPath: string) {
     throw error;
   }
   
-  // Note: the edge function returns the plaintext transcription for immediate UI display
   return data.text;
 }
 
 export async function retryEmbedding(entryId: string) {
-  // Update status to processing to clear the error visually
+  const mek = await getLocalMEK();
+  if (!mek) throw new Error('Encryption key not found.');
+
   await supabase.from('entries').update({ processing_status: 'ready', last_error: null }).eq('id', entryId);
   
   const { data, error } = await supabase.functions.invoke('process-entry', {
-    body: { entryId },
+    body: { entryId, encryptionKey: mek },
   });
   
   if (error) {
@@ -157,12 +220,65 @@ export async function retryEmbedding(entryId: string) {
   return data;
 }
 
-export async function searchEntries(query: string) {
+export async function searchEntries(query: string, filterType?: string, filterStartDate?: string): Promise<any[]> {
+  const mek = await getLocalMEK();
+  if (!mek) throw new Error('Encryption key not found. Please set up your recovery passphrase.');
+
   const { data, error } = await supabase.functions.invoke('search-entries', {
-    body: { query },
+    body: { query, filterType, filterStartDate },
   });
   
   if (error) throw error;
   
-  return data.results as Array<{ id: string; content: string; created_at: string; similarity: number }>;
+  // 1. Decrypt all candidates
+  const decryptedResults = await Promise.all(data.results.map(async (item: any) => ({
+    ...item,
+    content: item.encrypted_content ? await decryptText(item.encrypted_content, mek) : '',
+    fullContent: item.encrypted_entry_content ? await decryptText(item.encrypted_entry_content, mek) : ''
+  })));
+
+  // 2. Vector Rank (items are already ordered by vector similarity from DB)
+  const vectorRanked = decryptedResults.map((item, index) => ({ 
+    ...item, 
+    vectorRank: index + 1 
+  }));
+
+  // 3. Keyword Rank
+  const queryTokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+  const keywordScored = vectorRanked.map(item => {
+    let exactMatches = 0;
+    const textLower = item.content.toLowerCase();
+    
+    queryTokens.forEach(token => {
+      if (textLower.includes(token)) {
+        exactMatches += 1;
+      }
+    });
+
+    const hasExactPhrase = textLower.includes(query.toLowerCase());
+    const keywordScore = exactMatches + (hasExactPhrase ? 5 : 0); // Pure sorting signal
+    
+    return { ...item, keywordScore, hasExactPhrase };
+  });
+
+  // Sort to establish keyword rankings
+  const keywordRanked = [...keywordScored]
+    .sort((a, b) => b.keywordScore - a.keywordScore)
+    .map((item, index) => ({ ...item, keywordRank: index + 1 }));
+
+  // 4. Reciprocal Rank Fusion (RRF)
+  const k = 60; // Standard RRF constant
+  const rrfScored = keywordRanked.map(item => {
+    const rrfScore = (1 / (k + item.vectorRank)) + (1 / (k + item.keywordRank));
+    return { ...item, rrfScore };
+  });
+
+  // 5. Final Sort by RRF
+  rrfScored.sort((a, b) => b.rrfScore - a.rrfScore);
+  
+  // Return top 10 and map them so their final index is their final rank
+  return rrfScored.slice(0, 10).map((item, index) => ({
+    ...item,
+    finalRank: index + 1
+  }));
 }

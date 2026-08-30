@@ -7,6 +7,7 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { supabase } from '@/src/lib/supabase';
+import { getLocalMEK } from '@/src/lib/encryption';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -25,6 +26,13 @@ export default function TabLayout() {
         router.replace('/(auth)/sign-in');
         return;
       }
+      
+      const mek = await getLocalMEK();
+      if (!mek) {
+        router.replace('/(auth)/recovery');
+        return;
+      }
+      
       setIsReady(true);
     } catch (e) {
       console.error(e);
@@ -57,18 +65,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="history"
         options={{
-          title: 'History',
+          title: 'Journal',
           tabBarIcon: ({ color }) => (
-            <SymbolView name={{ ios: 'clock.fill', android: 'history', web: 'history' }} tintColor={color} size={28} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="ask"
-        options={{
-          title: 'Ask Qora',
-          tabBarIcon: ({ color }) => (
-            <SymbolView name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }} tintColor={color} size={28} />
+            <SymbolView name={{ ios: 'books.vertical.fill', android: 'book', web: 'book' }} tintColor={color} size={28} />
           ),
         }}
       />

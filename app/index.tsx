@@ -1,12 +1,5 @@
-import { View, ActivityIndicator } from 'react-native';
-import { useAuth } from '../src/providers/AuthProvider';
+import { Redirect } from 'expo-router';
 
 export default function Index() {
-  const { isInitialized } = useAuth();
-
-  return (
-    <View className="flex-1 items-center justify-center bg-white dark:bg-black">
-      {!isInitialized && <ActivityIndicator size="large" />}
-    </View>
-  );
+  return <Redirect href="/(tabs)/home" />;
 }

@@ -58,11 +58,12 @@ function RootLayoutNav() {
     if (!isInitialized) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const isRecovery = segments[1] === 'recovery';
 
     if (!session && !inAuthGroup) {
       // User is not signed in and trying to access protected screens
       router.replace('/(auth)/sign-in');
-    } else if (session && inAuthGroup) {
+    } else if (session && inAuthGroup && !isRecovery) {
       // User is signed in and trying to access sign-in / sign-up screens
       router.replace('/(tabs)/home');
     }

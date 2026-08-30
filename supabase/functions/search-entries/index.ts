@@ -15,7 +15,7 @@ serve(async (req) => {
   }
 
   try {
-    const { query } = await req.json();
+    const { query, filterType, filterStartDate } = await req.json();
     if (!query) throw new Error("Missing search query");
 
     const supabaseClient = createClient(
@@ -28,12 +28,14 @@ serve(async (req) => {
     const queryEmbedding = await session.run(query, { mean_pool: true, normalize: true });
     const embeddingArray = Array.from(queryEmbedding);
 
-    // 2. Pass the vector to our Postgres match_entries function
+    // 2. Pass the vector and filters to our Postgres match_entries function
     const { data: matchedEntries, error: matchError } = await supabaseClient
       .rpc('match_entries', {
         query_embedding: JSON.stringify(embeddingArray),
-        match_threshold: 0.7, // Adjust this to make it more or less strict
-        match_count: 15
+        match_threshold: 0.65, // Lower threshold for broad retrieval
+        match_count: 30, // Fetch more candidates for client-side reranking
+        filter_type: filterType || null,
+        filter_start_date: filterStartDate || null
       });
 
     if (matchError) throw new Error("Failed to match entries: " + matchError.message);

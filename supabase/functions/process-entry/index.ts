@@ -1,92 +1,89 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-// @ts-ignore: Supabase is globally available in the Edge Runtime
-const session = new Supabase.ai.Session('gte-small');
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { decryptText, encryptText } from '../shared/encryption.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-function chunkText(text: string, maxWords = 300, overlap = 50): string[] {
-  const words = text.split(/\s+/);
-  if (words.length <= maxWords) return [text];
-  
-  const chunks = [];
-  let i = 0;
-  while (i < words.length) {
-    const chunk = words.slice(i, i + maxWords).join(" ");
-    chunks.push(chunk);
-    i += (maxWords - overlap);
-  }
-  return chunks;
 }
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { entryId } = await req.json();
-    if (!entryId) throw new Error("Missing entryId");
+    const { entryId, encryptionKey } = await req.json()
+    if (!entryId || !encryptionKey) {
+      throw new Error('entryId and encryptionKey are required')
+    }
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    );
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
 
-    // 1. Fetch the entry content
-    const { data: entry, error: fetchError } = await supabaseClient
+    // Fetch the entry
+    const { data: entry, error: entryError } = await supabaseClient
       .from('entries')
-      .select('content')
+      .select('encrypted_content')
       .eq('id', entryId)
-      .single();
+      .single()
 
-    if (fetchError || !entry) throw new Error("Failed to fetch entry: " + fetchError?.message);
-
-    const plainText = entry.content;
-    if (!plainText || plainText.trim().length === 0) {
-      return new Response(JSON.stringify({ message: "Empty content, nothing to process" }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (entryError || !entry) {
+      throw new Error('Entry not found')
     }
 
-    // 2. Generate Whole Entry Embedding using native Supabase AI on the plaintext
-    const wholeEmbedding = await session.run(plainText, { mean_pool: true, normalize: true });
+    // Decrypt the content in-memory
+    let plaintext = '';
+    try {
+      plaintext = await decryptText(entry.encrypted_content, encryptionKey);
+    } catch (e) {
+      throw new Error('Failed to decrypt entry content with provided key');
+    }
 
-    // Update the whole_embedding on the entry
+    // Generate embedding for the full entry
+    const session = new (globalThis as any).Supabase.ai.Session('gte-small')
+    const wholeEmbedding = await session.run(plaintext, { mean_pool: true, normalize: true })
+
+    // Naive chunking
+    const chunks = plaintext.split('\n\n').filter((c: string) => c.trim().length > 0)
+    
+    // Clear old chunks
+    await supabaseClient.from('entry_chunks').delete().eq('entry_id', entryId)
+
+    // Generate embeddings for chunks and encrypt them
+    for (let i = 0; i < chunks.length; i++) {
+      const chunkText = chunks[i]
+      const chunkEmbedding = await session.run(chunkText, { mean_pool: true, normalize: true })
+      
+      const encryptedChunk = await encryptText(chunkText, encryptionKey);
+      
+      await supabaseClient.from('entry_chunks').insert({
+        entry_id: entryId,
+        encrypted_chunk_text: encryptedChunk,
+        embedding: Array.from(chunkEmbedding),
+      })
+    }
+
+    // Update entry with whole embedding and mark as ready
     await supabaseClient
       .from('entries')
-      .update({ whole_embedding: JSON.stringify(Array.from(wholeEmbedding)) })
-      .eq('id', entryId);
+      .update({
+        whole_embedding: Array.from(wholeEmbedding),
+        processing_status: 'ready'
+      })
+      .eq('id', entryId)
 
-    // 3. Chunking for long entries
-    const chunks = chunkText(plainText);
-    if (chunks.length > 1) {
-      for (const chunkTextContent of chunks) {
-        const chunkEmbedding = await session.run(chunkTextContent, { mean_pool: true, normalize: true });
-
-        await supabaseClient
-          .from('entry_chunks')
-          .insert([{ 
-            entry_id: entryId, 
-            chunk_text: chunkTextContent, 
-            embedding: JSON.stringify(Array.from(chunkEmbedding)) 
-          }]);
-      }
-    }
-
-    return new Response(JSON.stringify({ success: true, chunksGenerated: chunks.length }), {
+    return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  } catch (error) {
-    console.error("Processing Error:", error);
+    })
+
+  } catch (error: any) {
+    console.error('Error:', error)
     return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
-    });
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
-});
+})
