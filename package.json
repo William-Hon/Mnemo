@@ -42,6 +42,7 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
+    "build": "npx expo export",
     "start": "cross-env NODE_OPTIONS=--max-old-space-size=4096 expo start",
     "android": "cross-env NODE_OPTIONS=--max-old-space-size=4096 expo start --android",
     "ios": "cross-env NODE_OPTIONS=--max-old-space-size=4096 expo start --ios",
