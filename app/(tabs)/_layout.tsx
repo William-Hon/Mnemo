@@ -6,33 +6,25 @@ import { Platform, View, ActivityIndicator } from 'react-native';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
-import { getLocalMEK } from '@/src/lib/encryption';
 import { supabase } from '@/src/lib/supabase';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
+  const headerShown = useClientOnlyValue(false, true);
 
   useEffect(() => {
-    checkAuthAndEncryption();
+    checkAuth();
   }, []);
 
-  const checkAuthAndEncryption = async () => {
+  const checkAuth = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.replace('/(auth)/sign-in');
         return;
       }
-      
-      const mek = await getLocalMEK();
-      if (!mek) {
-        // MEK missing, force recovery
-        router.replace('/(auth)/recovery');
-        return;
-      }
-      
       setIsReady(true);
     } catch (e) {
       console.error(e);
@@ -51,7 +43,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme].tint,
-        headerShown: useClientOnlyValue(false, true),
+        headerShown,
       }}>
       <Tabs.Screen
         name="home"

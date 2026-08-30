@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { encryptText } from "../shared/encryption.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,13 +13,10 @@ serve(async (req) => {
   }
 
   try {
-    const { entryId, audioPath, encryptionKey } = await req.json();
+    const { entryId, audioPath } = await req.json();
     
     if (!entryId || !audioPath) {
       throw new Error("Missing entryId or audioPath");
-    }
-    if (!encryptionKey) {
-      throw new Error("Missing encryptionKey");
     }
 
     const groqApiKey = Deno.env.get('GROQ_API_KEY');
@@ -73,15 +69,12 @@ serve(async (req) => {
 
     const result = await response.json();
     const transcribedText = result.text;
-    
-    // Encrypt the transcribed text!
-    const encryptedContent = await encryptText(transcribedText, encryptionKey);
 
-    // Update the database with the encrypted transcription
+    // Update the database with the plaintext transcription
     const { error: updateError } = await supabaseClient
       .from('entries')
       .update({ 
-        encrypted_content: encryptedContent,
+        content: transcribedText,
         processing_status: 'ready' 
       })
       .eq('id', entryId);

@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { decryptText, encryptText } from "../shared/encryption.ts";
 
 // @ts-ignore: Supabase is globally available in the Edge Runtime
 const session = new Supabase.ai.Session('gte-small');
@@ -30,9 +29,8 @@ serve(async (req) => {
   }
 
   try {
-    const { entryId, encryptionKey } = await req.json();
+    const { entryId } = await req.json();
     if (!entryId) throw new Error("Missing entryId");
-    if (!encryptionKey) throw new Error("Missing encryptionKey");
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -43,21 +41,18 @@ serve(async (req) => {
     // 1. Fetch the entry content
     const { data: entry, error: fetchError } = await supabaseClient
       .from('entries')
-      .select('encrypted_content')
+      .select('content')
       .eq('id', entryId)
       .single();
 
     if (fetchError || !entry) throw new Error("Failed to fetch entry: " + fetchError?.message);
 
-    const encryptedContent = entry.encrypted_content;
-    if (!encryptedContent || encryptedContent.trim().length === 0) {
+    const plainText = entry.content;
+    if (!plainText || plainText.trim().length === 0) {
       return new Response(JSON.stringify({ message: "Empty content, nothing to process" }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    // Decrypt content in memory to generate embeddings
-    const plainText = await decryptText(encryptedContent, encryptionKey);
 
     // 2. Generate Whole Entry Embedding using native Supabase AI on the plaintext
     const wholeEmbedding = await session.run(plainText, { mean_pool: true, normalize: true });
@@ -73,15 +68,12 @@ serve(async (req) => {
     if (chunks.length > 1) {
       for (const chunkTextContent of chunks) {
         const chunkEmbedding = await session.run(chunkTextContent, { mean_pool: true, normalize: true });
-        
-        // Encrypt the chunk text before storing it!
-        const encryptedChunk = await encryptText(chunkTextContent, encryptionKey);
 
         await supabaseClient
           .from('entry_chunks')
           .insert([{ 
             entry_id: entryId, 
-            encrypted_chunk_text: encryptedChunk, 
+            chunk_text: chunkTextContent, 
             embedding: JSON.stringify(Array.from(chunkEmbedding)) 
           }]);
       }
