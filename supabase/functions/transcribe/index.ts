@@ -26,16 +26,20 @@ serve(async (req) => {
     // Download audio file from storage
     const { data: fileData, error: downloadError } = await supabaseClient
       .storage
-      .from('audio_entries')
+      .from('media')
       .download(audioPath);
 
     if (downloadError || !fileData) {
       throw new Error("Failed to download audio file: " + downloadError?.message);
     }
 
+    // Extract extension from path
+    const match = audioPath.match(/\.([a-zA-Z0-9]+)$/);
+    const ext = match ? match[1] : 'm4a';
+
     // Call Groq Whisper API
     const formData = new FormData();
-    formData.append('file', fileData, 'audio.m4a');
+    formData.append('file', fileData, `audio.${ext}`);
     formData.append('model', 'whisper-large-v3-turbo');
 
     const groqResponse = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {

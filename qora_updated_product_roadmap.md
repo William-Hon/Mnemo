@@ -899,13 +899,13 @@ The system should never silently invent details not present in the selected entr
 Phase 1: Mobile Foundation & Auth              ✅
 Phase 2: Typed Journal Entries                 ✅
 Phase 3: Voice Capture UI                      ✅
-Phase 4: Multimodal Ingestion
-Phase 5: Entry Processing & Search Indexing
-Phase 6: Hybrid Retrieval Engine
-Phase 7: Ranked Search + Relevant Previews
-Phase 8: Journal Bank UI
-Phase 9: Context Brief Builder & Export
-Phase 10: Privacy, Security & Data Ownership
+Phase 4: Multimodal Ingestion                      ✅
+Phase 5: Entry Processing & Search Indexing      ✅
+Phase 6: Hybrid Retrieval Engine                 ✅
+Phase 7: Ranked Search + Relevant Previews       ✅
+Phase 8: Journal Bank UI                         ✅
+Phase 9: Context Brief Builder & Export          ✅
+Phase 10: Privacy, Security & Data Ownership     ✅
 Phase 11: Offline Support & Reliability
 Phase 12: AI Reflection / RAG Chat
 Phase 13: Notifications & Retention
@@ -978,7 +978,7 @@ reviewing
 
 ---
 
-# Phase 4: Multimodal Ingestion
+# Phase 4: Multimodal Ingestion ✅
 
 ## Goal
 
@@ -1034,7 +1034,7 @@ failed
 
 ---
 
-# Phase 5: Entry Processing & Search Indexing
+# Phase 5: Entry Processing & Search Indexing ✅
 
 ## Goal
 
@@ -1062,7 +1062,7 @@ Important:
 
 ---
 
-# Phase 6: Hybrid Retrieval Engine
+# Phase 6: Hybrid Retrieval Engine ✅
 
 ## Goal
 
@@ -1113,7 +1113,7 @@ Never search all users' journal data and filter afterward.
 
 ---
 
-# Phase 7: Ranked Search + Relevant Previews
+# Phase 7: Ranked Search + Relevant Previews ✅
 
 ## Goal
 
@@ -1147,7 +1147,7 @@ Potential later upgrade:
 
 ---
 
-# Phase 8: Journal Bank UI
+# Phase 8: Journal Bank UI ✅
 
 ## Goal
 
@@ -1172,7 +1172,7 @@ The default experience should ideally use hybrid search automatically.
 
 ---
 
-# Phase 9: Context Brief Builder & Export
+# Phase 9: Context Brief Builder & Export ✅
 
 ## Goal
 
@@ -1205,7 +1205,7 @@ The user should be able to review what is included before export.
 
 ---
 
-# Phase 10: Privacy, Security & Data Ownership
+# Phase 10: Privacy, Security & Data Ownership ✅ ✅
 
 ## Goal
 

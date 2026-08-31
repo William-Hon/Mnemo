@@ -45,19 +45,20 @@ export default function SignUpScreen() {
   };
 
   return (
-    <View className="flex-1 justify-center px-6 bg-white dark:bg-black">
-      <Text className="text-3xl font-bold mb-8 text-center dark:text-white">Create Account</Text>
+    <View className="flex-1 justify-center px-6 bg-gray-50 dark:bg-black">
+      <Text className="text-4xl font-normal mb-10 tracking-widest text-center text-black dark:text-white">MNEMO</Text>
+      <Text className="text-xl font-bold mb-8 text-center text-gray-800 dark:text-gray-200 uppercase tracking-widest">Create Account</Text>
 
       {errorMsg ? (
-        <View className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 p-3 rounded-xl mb-4">
-          <Text className="text-red-600 dark:text-red-400 text-sm text-center">{errorMsg}</Text>
+        <View className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 p-3 rounded-sm mb-4">
+          <Text className="text-red-600 dark:text-red-400 text-sm text-center font-medium">{errorMsg}</Text>
         </View>
       ) : null}
 
       <TextInput
-        className="w-full bg-gray-100 dark:bg-gray-900 p-4 rounded-xl mb-4 text-black dark:text-white"
+        className="w-full bg-white dark:bg-gray-900 p-4 rounded-sm border border-gray-200 dark:border-gray-800 mb-4 text-black dark:text-white"
         placeholder="Email"
-        placeholderTextColor="#6b7280"
+        placeholderTextColor="#9ca3af"
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
@@ -68,11 +69,12 @@ export default function SignUpScreen() {
         editable={!loading}
       />
       <TextInput
-        className="w-full bg-gray-100 dark:bg-gray-900 p-4 rounded-xl mb-8 text-black dark:text-white"
+        className="w-full bg-white dark:bg-gray-900 p-4 rounded-sm border border-gray-200 dark:border-gray-800 mb-8 text-black dark:text-white"
         placeholder="Password (min. 6 characters)"
-        placeholderTextColor="#6b7280"
+        placeholderTextColor="#9ca3af"
         secureTextEntry
         value={password}
+        onSubmitEditing={handleSignUp}
         onChangeText={(text) => {
           setPassword(text);
           if (errorMsg) setErrorMsg(null);
@@ -83,20 +85,20 @@ export default function SignUpScreen() {
       <Pressable
         onPress={handleSignUp}
         disabled={loading}
-        className={`w-full p-4 rounded-xl items-center mb-6 ${
-          loading ? 'bg-gray-400 dark:bg-gray-700' : 'bg-black dark:bg-white active:opacity-80'
+        className={`w-full py-4 rounded-sm items-center mb-6 shadow-sm ${
+          loading ? 'bg-blue-400' : 'bg-blue-500 active:bg-blue-600 shadow-blue-500/20'
         }`}
       >
         {loading ? (
-          <ActivityIndicator color={process.env.EXPO_PUBLIC_COLOR_SCHEME === 'dark' ? '#000' : '#fff'} />
+          <ActivityIndicator color="#ffffff" />
         ) : (
-          <Text className="text-white dark:text-black font-semibold text-lg">Sign Up</Text>
+          <Text className="text-white font-bold text-lg tracking-wider">SIGN UP</Text>
         )}
       </Pressable>
 
       <Link href="/(auth)/sign-in" asChild>
-        <Pressable className="items-center p-2" disabled={loading}>
-          <Text className="text-gray-500">Already have an account? Sign in</Text>
+        <Pressable className="items-center p-2 active:opacity-50" disabled={loading}>
+          <Text className="text-gray-500 dark:text-gray-400 font-medium">Already have an account? Sign in</Text>
         </Pressable>
       </Link>
     </View>

@@ -1,4 +1,4 @@
-﻿# Qora Architecture Overview
+# Qora Architecture Overview
 
 ## 1. Account Creation & Auth
 - **Frontend**: `app/(auth)/sign-up.tsx`
@@ -22,11 +22,13 @@
 - **Security**: Standard Row-Level Security (RLS) restricts access to `auth.uid() = user_id`.
 
 ## 5. Search Engine
-- **Retrieval**: User query sent to `search-entries` Edge Function -> generates vector -> calls `match_entries` RPC to fetch top 30 conceptually similar encrypted chunks.
+- **Retrieval**: User query and optional date ranges sent to `search-entries` Edge Function -> generates vector -> calls `match_entries` RPC to fetch top 30 conceptually similar encrypted chunks.
 - **Local Reranking**: Client decrypts the 30 chunks -> runs exact keyword matching -> combines vector rank + keyword rank using Reciprocal Rank Fusion (RRF) -> displays top 10.
 
-## 6. Export Functionality
-- **Status**: Not currently implemented.
+## 6. Bulk Actions & Export Functionality
+- **Selection**: Users can long-press or use a "Select All" feature to multi-select journals from search results or filtered date ranges.
+- **Context Briefs**: Users can instantly export selected entries as plain-text Context Briefs for sharing with external LLMs or therapists.
+- **Bulk Delete**: Users can permanently delete multiple encrypted entries at once from the unified interface.
 
 ## 7. Admin Dashboard
 - **Scope**: User-scoped task management (`app/(tabs)/admin.tsx`).

@@ -77,35 +77,35 @@ export default function RecoveryScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-black items-center justify-center p-4">
-      <View className="w-full max-w-sm">
-        <Text className="text-3xl font-bold dark:text-white mb-2 text-center">Unlock Journal</Text>
-        <Text className="text-gray-500 dark:text-gray-400 mb-8 text-center leading-relaxed">
-          Your journal is end-to-end encrypted. Enter your recovery passphrase to unlock your device. If you are new, this will create your permanent passphrase.
-        </Text>
+    <View className="flex-1 justify-center px-6 bg-gray-50 dark:bg-black">
+      <Text className="text-4xl font-normal mb-10 tracking-widest text-center text-black dark:text-white">MNEMO</Text>
+      <Text className="text-xl font-bold mb-4 text-center text-gray-800 dark:text-gray-200 uppercase tracking-widest">Encryption Key for this Device</Text>
+      <Text className="text-gray-500 dark:text-gray-400 mb-8 text-center leading-relaxed font-medium">
+        Your journal is end-to-end encrypted. Enter your recovery passphrase to unlock your device. If you are new, this will create your permanent passphrase.
+      </Text>
 
-        <TextInput
-          className="bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 text-base mb-6 dark:text-white"
-          placeholder="Recovery Passphrase"
-          placeholderTextColor="#888"
-          secureTextEntry
-          value={passphrase}
-          onChangeText={setPassphrase}
-          editable={!loading}
-        />
+      <TextInput
+        className="w-full bg-white dark:bg-gray-900 p-4 rounded-sm border border-gray-200 dark:border-gray-800 mb-6 text-black dark:text-white"
+        placeholder="Recovery Passphrase"
+        placeholderTextColor="#9ca3af"
+        secureTextEntry
+        value={passphrase}
+        onSubmitEditing={handleSetupOrUnlock}
+        onChangeText={setPassphrase}
+        editable={!loading}
+      />
 
-        <Pressable 
-          className={`bg-blue-500 rounded-xl p-4 items-center ${loading ? 'opacity-50' : 'active:bg-blue-600'}`}
-          onPress={handleSetupOrUnlock}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text className="text-white font-semibold text-lg">Unlock / Setup</Text>
-          )}
-        </Pressable>
-      </View>
-    </SafeAreaView>
+      <Pressable 
+        className={`w-full py-4 rounded-sm items-center mb-6 shadow-sm ${loading ? 'bg-blue-400' : 'bg-blue-500 active:bg-blue-600 shadow-blue-500/20'}`}
+        onPress={handleSetupOrUnlock}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#ffffff" />
+        ) : (
+          <Text className="text-white font-bold text-lg tracking-wider">UNLOCK / SETUP</Text>
+        )}
+      </Pressable>
+    </View>
   );
 }

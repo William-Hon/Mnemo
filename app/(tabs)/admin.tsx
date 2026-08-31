@@ -153,9 +153,7 @@ export default function AdminScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-black p-4">
-      <Text className="text-3xl font-bold mb-2 dark:text-white">Admin</Text>
-      
+    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-black p-4 mt-8">
       {/* Segmented Control */}
       <View className="flex-row bg-gray-200 dark:bg-gray-800 rounded-lg p-1 mb-6">
         <Pressable 

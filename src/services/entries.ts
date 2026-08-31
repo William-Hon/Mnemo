@@ -59,25 +59,34 @@ export async function createTextEntry(text: string): Promise<Entry> {
   } as Entry;
 }
 
-export async function getUserEntries(filterType?: string, filterStartDate?: string): Promise<Entry[]> {
+export async function getUserEntries(type?: string, startDate?: string, endDate?: string, limit?: number) {
+  const mek = await getLocalMEK();
+  if (!mek) throw new Error('Encryption key not found. Please set up your recovery passphrase.');
+
   let query = supabase
     .from('entries')
     .select('*')
     .order('created_at', { ascending: false });
 
-  if (filterType && filterType !== 'all') {
-    query = query.eq('entry_type', filterType);
+  if (type) {
+    query = query.eq('entry_type', type);
   }
-  if (filterStartDate) {
-    query = query.gte('created_at', filterStartDate);
+
+  if (startDate) {
+    query = query.gte('created_at', startDate);
+  }
+  
+  if (endDate) {
+    query = query.lte('created_at', endDate);
+  }
+
+  if (limit) {
+    query = query.limit(limit);
   }
 
   const { data, error } = await query;
 
   if (error) throw error;
-
-  const mek = await getLocalMEK();
-  if (!mek) throw new Error('Encryption key not found. Please set up your recovery passphrase.');
 
   return await Promise.all(data.map(async entry => ({
     ...entry,
@@ -191,16 +200,38 @@ export async function processTranscription(entryId: string, audioPath: string) {
   const mek = await getLocalMEK();
   if (!mek) throw new Error('Encryption key not found. Please set up your recovery passphrase.');
 
-  const { data, error } = await supabase.functions.invoke('transcribe', {
+  const res = await supabase.functions.invoke('transcribe', {
     body: { entryId, audioPath, encryptionKey: mek },
   });
   
-  if (error) {
-    await markEntryFailed(entryId, error.message || JSON.stringify(error));
-    throw error;
+  if (res.error) {
+    console.log("Edge Function raw error:", res.error);
+    
+    let errorMsg = res.error.message;
+    // Attempt to extract the response body if it's a FunctionsHttpError
+    if (res.error.context && typeof res.error.context.json === 'function') {
+      try {
+        const body = await res.error.context.json();
+        errorMsg = body.error || JSON.stringify(body);
+        console.log("Parsed error body:", errorMsg);
+      } catch (e) {
+        // ignore
+      }
+    } else if (res.error.context && typeof res.error.context.text === 'function') {
+      try {
+        const text = await res.error.context.text();
+        errorMsg = text;
+        console.log("Parsed error text:", text);
+      } catch (e) {
+        // ignore
+      }
+    }
+    
+    await markEntryFailed(entryId, errorMsg || JSON.stringify(res.error));
+    throw new Error(errorMsg);
   }
   
-  return data.text;
+  return res.data.text;
 }
 
 export async function retryEmbedding(entryId: string) {
@@ -220,7 +251,7 @@ export async function retryEmbedding(entryId: string) {
   return data;
 }
 
-export async function searchEntries(query: string, filterType?: string, filterStartDate?: string): Promise<any[]> {
+export async function searchEntries(query: string, filterType?: string, filterStartDate?: string, filterEndDate?: string): Promise<any[]> {
   const mek = await getLocalMEK();
   if (!mek) throw new Error('Encryption key not found. Please set up your recovery passphrase.');
 
@@ -228,14 +259,26 @@ export async function searchEntries(query: string, filterType?: string, filterSt
     body: { query, filterType, filterStartDate },
   });
   
-  if (error) throw error;
+  if (error || !data || !data.results) {
+    console.error("Search edge function failed:", error);
+    return [];
+  }
   
   // 1. Decrypt all candidates
-  const decryptedResults = await Promise.all(data.results.map(async (item: any) => ({
+  let decryptedResults = await Promise.all(data.results.map(async (item: any) => ({
     ...item,
     content: item.encrypted_content ? await decryptText(item.encrypted_content, mek) : '',
     fullContent: item.encrypted_entry_content ? await decryptText(item.encrypted_entry_content, mek) : ''
   })));
+
+  // Client-side end-date filter
+  if (filterEndDate) {
+    const end = new Date(filterEndDate).getTime();
+    decryptedResults = decryptedResults.filter(item => {
+      const created = new Date(item.created_at).getTime();
+      return created <= end;
+    });
+  }
 
   // 2. Vector Rank (items are already ordered by vector similarity from DB)
   const vectorRanked = decryptedResults.map((item, index) => ({ 

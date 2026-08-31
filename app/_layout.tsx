@@ -1,5 +1,5 @@
 import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, ThemeProvider, DarkTheme } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import '../global.css';
@@ -7,6 +7,18 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider, useAuth } from '../src/providers/AuthProvider';
+
+const QoraDarkTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    background: '#000000',
+    card: '#000000',
+    text: '#ffffff',
+    border: '#333333',
+    notification: '#ffffff',
+  },
+};
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -49,7 +61,6 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
   const { session, isInitialized } = useAuth();
   const segments = useSegments();
   const router = useRouter();
@@ -70,8 +81,8 @@ function RootLayoutNav() {
   }, [session, isInitialized, segments]);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
+    <ThemeProvider value={QoraDarkTheme}>
+      <Stack screenOptions={{ contentStyle: { backgroundColor: '#000000' } }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />

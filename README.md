@@ -1,23 +1,24 @@
 # Qora
 
 ## Overview
-Qora is a guided journaling application designed to help users process their feelings. It provides a structured flow where users write about their current feelings, why they feel that way, and then receive an intelligent follow-up prompt based on the emotions detected in their responses.
+Qora is a mobile-first personal journal bank and context retrieval app. It is designed to let users capture thoughts in whatever format is easiest (text, voice), preserve that context securely over time, and reliably retrieve the most relevant past entries using a hybrid semantic/keyword search engine. 
 
 ---
 
 ## Current Product Stage
-Smart Prompt & Emotion Detection MVP
+Phase 10: Semantic Journal Bank MVP (Completed)
 
 ---
 
 ## Current Features
-- Guided journaling flow with 3 steps
-- Secure cloud journal storage with User Authentication (via Supabase)
-- Keyword-based emotion detection with confidence scoring and contextual modifiers (negation, intensifiers)
-- Fallback emotion survey for low-confidence detections
-- Smart follow-up prompts tailored to detected emotions
-- Safety checks for high-risk keywords
-- Speech-to-text dictation using the Web Speech API
+- Multi-modal capture: Typed entries and Voice capture with live audio decibel metering
+- Advanced Hybrid Retrieval: Semantic (pgvector) and Full-text keyword search
+- Local Audio Transcription and AI Processing Pipeline (Save First, Process Second)
+- Supabase-backed secure cloud storage with strict Row Level Security (RLS)
+- End-to-End Application-Level Privacy & Encryption Architecture
+- Custom Brutalist/Mystic Blue UI with floating modals and drop-shadows
+- Bulk Actions & Export: Select multiple journals and export them as a Context Brief
+- Cross-Platform Support (iOS, Android, Web via Expo)
 - Hybrid Image and PDF scanning
   - Typed documents use free, browser-native Tesseract.js and PDF.js
   - Handwritten documents securely use Google Cloud Vision API for high accuracy

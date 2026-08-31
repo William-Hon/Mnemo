@@ -8,12 +8,16 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { supabase } from '@/src/lib/supabase';
 import { getLocalMEK } from '@/src/lib/encryption';
+import { useAuth } from '@/src/providers/AuthProvider';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
   const headerShown = useClientOnlyValue(false, true);
+  const { session } = useAuth();
+  
+  const isAdmin = session?.user?.email === '32whon@gmail.com';
 
   useEffect(() => {
     checkAuth();
@@ -21,8 +25,8 @@ export default function TabLayout() {
 
   const checkAuth = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      if (!authSession) {
         router.replace('/(auth)/sign-in');
         return;
       }
@@ -50,43 +54,48 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme].tint,
-        headerShown,
+        tabBarActiveTintColor: '#ffffff',
+        tabBarInactiveTintColor: '#888888',
+        tabBarStyle: {
+          backgroundColor: '#000000',
+          borderTopColor: '#333333',
+        },
+        headerShown: false,
       }}>
       <Tabs.Screen
         name="home"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => (
-            <SymbolView name={{ ios: 'house.fill', android: 'home', web: 'home' }} tintColor={color} size={28} />
-          ),
+          tabBarIcon: () => null,
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
-          title: 'Journal',
-          tabBarIcon: ({ color }) => (
-            <SymbolView name={{ ios: 'books.vertical.fill', android: 'book', web: 'book' }} tintColor={color} size={28} />
-          ),
+          title: 'Journals',
+          tabBarIcon: () => null,
+        }}
+      />
+      <Tabs.Screen
+        name="about"
+        options={{
+          title: 'About',
+          tabBarIcon: () => null,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color }) => (
-            <SymbolView name={{ ios: 'gearshape.fill', android: 'settings', web: 'settings' }} tintColor={color} size={28} />
-          ),
+          tabBarIcon: () => null,
         }}
       />
       <Tabs.Screen
         name="admin"
         options={{
           title: 'Admin',
-          tabBarIcon: ({ color }) => (
-            <SymbolView name={{ ios: 'exclamationmark.triangle.fill', android: 'warning', web: 'warning' }} tintColor={color} size={28} />
-          ),
+          href: isAdmin ? '/admin' : null,
+          tabBarIcon: () => null,
         }}
       />
     </Tabs>

@@ -3,6 +3,8 @@ import { Platform } from 'react-native';
 
 let webMediaRecorder: MediaRecorder | null = null;
 let webAudioChunks: Blob[] = [];
+let webAudioCtx: AudioContext | null = null;
+let webAnimationFrameId: number | null = null;
 
 // Helper to request permissions
 export async function requestMicrophonePermissions() {
@@ -22,7 +24,7 @@ export async function requestMicrophonePermissions() {
 }
 
 // Starts a new recording using high quality presets
-export async function startRecording(): Promise<any> {
+export async function startRecording(onMetering?: (db: number) => void): Promise<any> {
   try {
     if (Platform.OS === 'web') {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -35,6 +37,29 @@ export async function startRecording(): Promise<any> {
         }
       };
       
+      if (onMetering) {
+        webAudioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const analyser = webAudioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        const source = webAudioCtx.createMediaStreamSource(stream);
+        source.connect(analyser);
+        
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const updateMetering = () => {
+          analyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
+          }
+          const average = sum / dataArray.length;
+          // map 0-255 roughly to -60dB to 0dB range for consistency
+          const db = -60 + (average / 255) * 60;
+          onMetering(db);
+          webAnimationFrameId = requestAnimationFrame(updateMetering);
+        };
+        updateMetering();
+      }
+      
       webMediaRecorder.start();
       return 'web-recording'; // Truthy value so UI knows it started
     }
@@ -45,7 +70,13 @@ export async function startRecording(): Promise<any> {
     });
     
     const { recording } = await Audio.Recording.createAsync(
-      Audio.RecordingOptionsPresets.HIGH_QUALITY
+      Audio.RecordingOptionsPresets.HIGH_QUALITY,
+      onMetering ? (status) => {
+        if (status.metering !== undefined) {
+           onMetering(status.metering);
+        }
+      } : undefined,
+      100
     );
     return recording;
   } catch (err) {
@@ -57,6 +88,17 @@ export async function startRecording(): Promise<any> {
 // Stops recording and returns the local file URI (or Blob URL on web)
 export async function stopRecording(recording: any): Promise<string | null> {
   try {
+    if (Platform.OS === 'web') {
+      if (webAnimationFrameId !== null) {
+        cancelAnimationFrame(webAnimationFrameId);
+        webAnimationFrameId = null;
+      }
+      if (webAudioCtx) {
+        webAudioCtx.close();
+        webAudioCtx = null;
+      }
+    }
+    
     if (Platform.OS === 'web' && webMediaRecorder) {
       return await new Promise<string | null>((resolve, reject) => {
         webMediaRecorder!.onstop = () => {
