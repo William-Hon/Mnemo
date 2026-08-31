@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, Pressable, ActivityIndicator, Alert, Modal, Platform } from 'react-native';
 import { Link } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 
@@ -8,6 +8,7 @@ export default function SignUpScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showAbout, setShowAbout] = useState(false);
 
   const handleSignUp = async () => {
     setErrorMsg(null);
@@ -46,7 +47,31 @@ export default function SignUpScreen() {
 
   return (
     <View className="flex-1 justify-center px-6 bg-gray-50 dark:bg-black">
-      <Text className="text-4xl font-normal mb-10 tracking-widest text-center text-black dark:text-white">MNEMO</Text>
+      <Text className="text-4xl font-normal mb-2 tracking-widest text-center text-black dark:text-white">MNEMO</Text>
+      <Pressable onPress={() => setShowAbout(true)} className="mb-10 items-center active:opacity-50">
+        <Text className="text-gray-500 dark:text-gray-400 text-[10px] tracking-widest uppercase font-medium underline">"What is MNEMO?"</Text>
+      </Pressable>
+
+      <Modal visible={showAbout} transparent animationType="fade">
+        <View className="flex-1 justify-center items-center bg-black/80 px-6">
+          <View className="bg-gray-900 border border-gray-800 p-6 rounded-sm w-full max-w-sm">
+            <Text className="text-xl font-bold mb-4 text-white uppercase tracking-widest">About MNEMO</Text>
+            <Text className="text-gray-300 mb-4 leading-relaxed font-medium">
+              MNEMO is a privacy-first journal archive.
+            </Text>
+            <Text className="text-gray-300 mb-4 leading-relaxed font-medium">
+              Rant freely. Your entries are encrypted, organized, and searchable by meaning (even if they’re messy).
+            </Text>
+            <Text className="text-gray-300 mb-8 leading-relaxed font-medium">
+              Find specific memories later, then choose what to do with them: bring them to therapy, export them to AI for deeper analysis, or keep them completely private.
+            </Text>
+            <Pressable onPress={() => setShowAbout(false)} className="py-2 items-center active:opacity-50">
+              <Text style={{ textShadowColor: 'rgba(59, 130, 246, 0.8)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 16 }} className="text-blue-500 font-normal tracking-widest uppercase text-base">CLOSE</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
       <Text className="text-xl font-bold mb-8 text-center text-gray-800 dark:text-gray-200 uppercase tracking-widest">Create Account</Text>
 
       {errorMsg ? (
@@ -82,19 +107,20 @@ export default function SignUpScreen() {
         editable={!loading}
       />
 
-      <Pressable
-        onPress={handleSignUp}
-        disabled={loading}
-        className={`w-full py-4 rounded-sm items-center mb-6 shadow-sm ${
-          loading ? 'bg-blue-400' : 'bg-blue-500 active:bg-blue-600 shadow-blue-500/20'
-        }`}
-      >
-        {loading ? (
-          <ActivityIndicator color="#ffffff" />
-        ) : (
-          <Text className="text-white font-bold text-lg tracking-wider">SIGN UP</Text>
-        )}
-      </Pressable>
+      <View className="w-full items-center mb-6">
+        <Pressable
+          onPress={handleSignUp}
+          disabled={loading}
+          style={Platform.OS === 'web' ? { boxShadow: '0 0 15px rgba(59, 130, 246, 0.3)' } as any : { shadowColor: '#3b82f6', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 5 }}
+          className="border border-blue-500 px-10 py-3 rounded-sm active:opacity-50"
+        >
+          {loading ? (
+            <ActivityIndicator color="#3b82f6" />
+          ) : (
+            <Text style={{ textShadowColor: 'rgba(59, 130, 246, 0.8)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 16 }} className="text-blue-500 font-normal text-lg tracking-widest uppercase">SIGN UP</Text>
+          )}
+        </Pressable>
+      </View>
 
       <Link href="/(auth)/sign-in" asChild>
         <Pressable className="items-center p-2 active:opacity-50" disabled={loading}>
