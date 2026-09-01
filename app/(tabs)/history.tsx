@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { View, Text, FlatList, ActivityIndicator, RefreshControl, TextInput, Pressable, SafeAreaView, Keyboard, Alert, Modal, Platform, ScrollView, useWindowDimensions } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, RefreshControl, TextInput, Pressable, SafeAreaView, Keyboard, Alert, Modal, Platform, ScrollView, useWindowDimensions, KeyboardAvoidingView } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import { useFocusEffect } from 'expo-router';
 import * as Print from 'expo-print';
@@ -600,12 +600,12 @@ export default function HistoryScreen() {
         )}
 
         {/* Search and Filters */}
-        <View className="flex-row items-center gap-3 mb-6 relative z-50">
-          <View className="flex-1 flex-row items-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-sm px-4 h-12 shadow-sm">
+        <View className="flex-col lg:flex-row gap-3 mb-6 relative z-50 w-full">
+          <View className="flex-1 flex-row items-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-sm px-4 h-12 shadow-sm w-full">
             <SymbolView name={{ ios: 'magnifyingglass', android: 'search', web: 'search' } as any} tintColor="#9ca3af" size={20} />
             <TextInput
               className="flex-1 ml-3 text-gray-900 dark:text-white text-base h-full outline-none"
-              placeholder="Search for specific journals"
+              placeholder="Search journals"
               placeholderTextColor="#9ca3af"
               value={query}
               onChangeText={setQuery}
@@ -618,89 +618,91 @@ export default function HistoryScreen() {
             )}
           </View>
           
-          <View className="relative z-50">
-            <Pressable 
-              onPress={() => setShowDatePicker(!showDatePicker)}
-              className={`flex-row items-center justify-center bg-white dark:bg-gray-900 border px-4 h-12 rounded-sm shadow-sm ${
-                startDate || endDate ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-800'
-              }`}
-            >
-              <SymbolView name={{ ios: 'calendar', android: 'calendar_today', web: 'calendar_today' } as any} tintColor={startDate || endDate ? '#3b82f6' : '#9ca3af'} size={18} />
-              <Text className={`ml-2 text-sm font-bold ${startDate || endDate ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                Date Range
-              </Text>
-            </Pressable>
-
-            {/* Simple Date Picker Dropdown */}
-            {showDatePicker && (
-              <View 
-                style={{ 
-                  transform: [{ scale: calendarScale }], 
-                  transformOrigin: 'top left' 
-                } as any}
-                className="absolute top-10 left-0 w-[280px] bg-white dark:bg-gray-900 rounded-sm shadow-xl border border-gray-200 dark:border-gray-800 p-3 z-50"
+          <View className="flex-row gap-3 relative z-50 w-full lg:w-auto">
+            <View className="relative z-50 flex-1 lg:flex-none">
+              <Pressable 
+                onPress={() => setShowDatePicker(!showDatePicker)}
+                className={`flex-1 lg:flex-none flex-row items-center justify-center bg-white dark:bg-gray-900 border px-2 sm:px-4 h-12 rounded-sm shadow-sm ${
+                  startDate || endDate ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-800'
+                }`}
               >
-                <SimpleCalendar tempStart={tempStart} setTempStart={setTempStart} tempEnd={tempEnd} setTempEnd={setTempEnd} />
-                
-                <View className="flex-col gap-2 mb-3">
-                  <TextInput 
-                    value={tempStart} 
-                    onChangeText={setTempStart} 
-                    placeholder="Start Date (YYYY-MM-DD)" 
-                    placeholderTextColor="#9ca3af" 
-                    className="w-full bg-gray-100 dark:bg-gray-800 p-2 text-xs rounded-sm dark:text-white" 
-                  />
-                  <TextInput 
-                    value={tempEnd} 
-                    onChangeText={setTempEnd} 
-                    placeholder="End Date (YYYY-MM-DD)" 
-                    placeholderTextColor="#9ca3af" 
-                    className="w-full bg-gray-100 dark:bg-gray-800 p-2 text-xs rounded-sm dark:text-white" 
-                  />
-                </View>
+                <SymbolView name={{ ios: 'calendar', android: 'calendar_today', web: 'calendar_today' } as any} tintColor={startDate || endDate ? '#3b82f6' : '#9ca3af'} size={18} />
+                <Text className={`ml-2 text-xs sm:text-sm font-bold ${startDate || endDate ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                  Date Range
+                </Text>
+              </Pressable>
 
-                <View className="flex-row justify-between border-t border-gray-100 dark:border-gray-800 pt-3 mt-1">
-                  <Pressable onPress={clearDateFilter} className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-sm">
-                    <Text className="text-gray-600 dark:text-gray-300 text-xs font-bold">Clear</Text>
-                  </Pressable>
-                  <View className="flex-row gap-2">
-                    <Pressable onPress={() => setShowDatePicker(false)} className="px-3 py-1.5 rounded-sm">
-                      <Text className="text-gray-500 text-xs font-bold">Cancel</Text>
+              {/* Simple Date Picker Dropdown */}
+              {showDatePicker && (
+                <View 
+                  style={{ 
+                    transform: [{ scale: calendarScale }], 
+                    transformOrigin: 'top left' 
+                  } as any}
+                  className="absolute top-10 left-0 w-[280px] max-w-[90vw] bg-white dark:bg-gray-900 rounded-sm shadow-xl border border-gray-200 dark:border-gray-800 p-3 z-50"
+                >
+                  <SimpleCalendar tempStart={tempStart} setTempStart={setTempStart} tempEnd={tempEnd} setTempEnd={setTempEnd} />
+                  
+                  <View className="flex-col gap-2 mb-3">
+                    <TextInput 
+                      value={tempStart} 
+                      onChangeText={setTempStart} 
+                      placeholder="Start Date (YYYY-MM-DD)" 
+                      placeholderTextColor="#9ca3af" 
+                      className="w-full bg-gray-100 dark:bg-gray-800 p-2 text-xs rounded-sm dark:text-white" 
+                    />
+                    <TextInput 
+                      value={tempEnd} 
+                      onChangeText={setTempEnd} 
+                      placeholder="End Date (YYYY-MM-DD)" 
+                      placeholderTextColor="#9ca3af" 
+                      className="w-full bg-gray-100 dark:bg-gray-800 p-2 text-xs rounded-sm dark:text-white" 
+                    />
+                  </View>
+
+                  <View className="flex-row justify-between border-t border-gray-100 dark:border-gray-800 pt-3 mt-1">
+                    <Pressable onPress={clearDateFilter} className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-sm">
+                      <Text className="text-gray-600 dark:text-gray-300 text-xs font-bold">Clear</Text>
                     </Pressable>
-                    <Pressable onPress={applyDateFilter} className="bg-blue-500 px-3 py-1.5 rounded-sm">
-                      <Text className="text-white text-xs font-bold">Apply</Text>
-                    </Pressable>
+                    <View className="flex-row gap-2">
+                      <Pressable onPress={() => setShowDatePicker(false)} className="px-3 py-1.5 rounded-sm">
+                        <Text className="text-gray-500 text-xs font-bold">Cancel</Text>
+                      </Pressable>
+                      <Pressable onPress={applyDateFilter} className="bg-blue-500 px-3 py-1.5 rounded-sm">
+                        <Text className="text-white text-xs font-bold">Apply</Text>
+                      </Pressable>
+                    </View>
                   </View>
                 </View>
-              </View>
-            )}
-          </View>
+              )}
+            </View>
 
-          <Pressable 
-            onPress={() => {
-              if (selectedIds.size > 0) {
-                setSelectedIds(new Set());
-              } else {
-                setSelectedIds(new Set(entries.map(e => e.entry_id || e.id)));
-              }
-            }}
-            className={`flex-row items-center justify-center bg-white dark:bg-gray-900 border px-4 h-12 rounded-sm shadow-sm ${
-              selectedIds.size > 0 ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-800'
-            }`}
-          >
-            <SymbolView 
-              name={{ 
-                ios: selectedIds.size > 0 ? 'checkmark.circle.fill' : 'checkmark.circle', 
-                android: selectedIds.size > 0 ? 'check_circle' : 'check_circle_outline', 
-                web: selectedIds.size > 0 ? 'check_circle' : 'check_circle_outline' 
-              } as any} 
-              tintColor={selectedIds.size > 0 ? '#3b82f6' : '#9ca3af'} 
-              size={18} 
-            />
-            <Text className={`ml-2 text-sm font-bold ${selectedIds.size > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`}>
-              {selectedIds.size > 0 ? 'Deselect All' : 'Select All'}
-            </Text>
-          </Pressable>
+            <Pressable 
+              onPress={() => {
+                if (selectedIds.size > 0) {
+                  setSelectedIds(new Set());
+                } else {
+                  setSelectedIds(new Set(entries.map(e => e.entry_id || e.id)));
+                }
+              }}
+              className={`flex-1 lg:flex-none flex-row items-center justify-center bg-white dark:bg-gray-900 border px-2 sm:px-4 h-12 rounded-sm shadow-sm ${
+                selectedIds.size > 0 ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-800'
+              }`}
+            >
+              <SymbolView 
+                name={{ 
+                  ios: selectedIds.size > 0 ? 'checkmark.circle.fill' : 'checkmark.circle', 
+                  android: selectedIds.size > 0 ? 'check_circle' : 'check_circle_outline', 
+                  web: selectedIds.size > 0 ? 'check_circle' : 'check_circle_outline' 
+                } as any} 
+                tintColor={selectedIds.size > 0 ? '#3b82f6' : '#9ca3af'} 
+                size={18} 
+              />
+              <Text className={`ml-2 text-xs sm:text-sm font-bold ${selectedIds.size > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                {selectedIds.size > 0 ? 'Deselect All' : 'Select All'}
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
         {/* Content Area */}
@@ -776,8 +778,8 @@ export default function HistoryScreen() {
       {/* Single Entry Reading Modal */}
       <Modal visible={!!selectedEntryToRead} animationType="fade" transparent={true}>
         {selectedEntryToRead && (
-          <View className="flex-1 bg-black/60 items-center justify-center p-4">
-            <View className="w-full max-w-2xl max-h-[90%] bg-white dark:bg-gray-900 rounded-sm shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 bg-black/60 items-center justify-center p-2 sm:p-4">
+            <View className="w-full max-w-2xl flex-1 max-h-[90%] sm:max-h-[85%] bg-white dark:bg-gray-900 rounded-sm shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
               <View className="flex-row justify-between items-center p-5 border-b border-gray-100 dark:border-gray-800">
                 <View className="flex-row gap-3">
                   <Pressable 
@@ -916,7 +918,7 @@ export default function HistoryScreen() {
                 )}
               </ScrollView>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         )}
       </Modal>
 

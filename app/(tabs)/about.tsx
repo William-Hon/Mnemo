@@ -39,9 +39,9 @@ export default function AboutScreen() {
           className="mb-4 bg-transparent rounded-sm p-5 border border-blue-500"
         >
           <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center gap-4">
+            <View className="flex-row items-center gap-4 flex-1 pr-2">
               <SymbolView name={{ ios: 'lock.fill', android: 'lock', web: 'lock' } as any} tintColor="#3b82f6" size={24} style={iconGlowStyle} />
-              <Text className="text-lg font-bold dark:text-white">Privacy-First Architecture</Text>
+              <Text className="text-lg font-bold dark:text-white flex-1 flex-wrap">Privacy-First Architecture</Text>
             </View>
             <SymbolView name={{ ios: expandedSection === 'privacy' ? 'chevron.up' : 'chevron.down', android: expandedSection === 'privacy' ? 'expand_less' : 'expand_more', web: expandedSection === 'privacy' ? 'expand_less' : 'expand_more' } as any} tintColor="#9ca3af" size={24} />
           </View>
@@ -103,9 +103,9 @@ export default function AboutScreen() {
           className="mb-4 bg-transparent rounded-sm p-5 border border-blue-500"
         >
           <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center gap-4">
+            <View className="flex-row items-center gap-4 flex-1 pr-2">
               <SymbolView name={{ ios: 'brain.head.profile', android: 'psychology', web: 'psychology' } as any} tintColor="#3b82f6" size={24} style={iconGlowStyle} />
-              <Text className="text-lg font-bold dark:text-white">Memory Storage & Hybrid RAG</Text>
+              <Text className="text-lg font-bold dark:text-white flex-1 flex-wrap">Memory Storage & Hybrid RAG</Text>
             </View>
             <SymbolView name={{ ios: expandedSection === 'rag' ? 'chevron.up' : 'chevron.down', android: expandedSection === 'rag' ? 'expand_less' : 'expand_more', web: expandedSection === 'rag' ? 'expand_less' : 'expand_more' } as any} tintColor="#9ca3af" size={24} />
           </View>
@@ -167,9 +167,9 @@ export default function AboutScreen() {
           className="mb-4 bg-transparent rounded-sm p-5 border border-blue-500"
         >
           <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center gap-4">
+            <View className="flex-row items-center gap-4 flex-1 pr-2">
               <SymbolView name={{ ios: 'cpu', android: 'memory', web: 'memory' } as any} tintColor="#3b82f6" size={24} style={iconGlowStyle} />
-              <Text className="text-lg font-bold dark:text-white">Private Local LLM</Text>
+              <Text className="text-lg font-bold dark:text-white flex-1 flex-wrap">Private Local LLM</Text>
             </View>
             <SymbolView name={{ ios: expandedSection === 'llm' ? 'chevron.up' : 'chevron.down', android: expandedSection === 'llm' ? 'expand_less' : 'expand_more', web: expandedSection === 'llm' ? 'expand_less' : 'expand_more' } as any} tintColor="#9ca3af" size={24} />
           </View>
@@ -237,9 +237,9 @@ export default function AboutScreen() {
           className="mb-12 bg-transparent rounded-sm p-5 border border-blue-500"
         >
           <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center gap-4">
+            <View className="flex-row items-center gap-4 flex-1 pr-2">
               <SymbolView name={{ ios: 'waveform', android: 'graphic_eq', web: 'graphic_eq' } as any} tintColor="#3b82f6" size={24} style={iconGlowStyle} />
-              <Text className="text-lg font-bold dark:text-white">Voice-to-Memory Pipeline</Text>
+              <Text className="text-lg font-bold dark:text-white flex-1 flex-wrap">Voice-to-Memory Pipeline</Text>
             </View>
             <SymbolView name={{ ios: expandedSection === 'voice' ? 'chevron.up' : 'chevron.down', android: expandedSection === 'voice' ? 'expand_less' : 'expand_more', web: expandedSection === 'voice' ? 'expand_less' : 'expand_more' } as any} tintColor="#9ca3af" size={24} />
           </View>
