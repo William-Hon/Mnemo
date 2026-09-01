@@ -47,7 +47,7 @@ export default function SignUpScreen() {
 
   return (
     <View className="flex-1 justify-center px-6 bg-gray-50 dark:bg-black">
-      <Text className="text-4xl font-normal mb-2 tracking-widest text-center text-black dark:text-white">MNEMO</Text>
+      <Text style={{ textShadowColor: 'rgba(59, 130, 246, 1)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 40 }} className="text-4xl font-normal mb-2 tracking-widest text-center text-blue-400">MNEMO</Text>
       <Pressable onPress={() => setShowAbout(true)} className="mb-10 items-center active:opacity-50">
         <Text className="text-gray-500 dark:text-gray-400 text-[10px] tracking-widest uppercase font-medium underline">"What is MNEMO?"</Text>
       </Pressable>
