@@ -19,7 +19,8 @@ export default function SettingsScreen() {
   const [modelActionLoading, setModelActionLoading] = useState(false);
   const [modelProgress, setModelProgress] = useState('');
   const [downloadLimit, setDownloadLimit] = useState<{used: number, total: number} | null>(null);
-
+  const [showLimitInfo, setShowLimitInfo] = useState(false);
+  const [showModelInfo, setShowModelInfo] = useState(false);
   React.useEffect(() => {
     checkModelStatus();
   }, []);
@@ -31,7 +32,10 @@ export default function SettingsScreen() {
     setDownloadLimit(limitInfo);
   };
 
+  const isOutOfDownloads = downloadLimit ? (downloadLimit.total - downloadLimit.used <= 0) : false;
+
   const handleDownloadModel = async () => {
+    if (isOutOfDownloads) return;
     try {
       setModelActionLoading(true);
       await LocalAIService.initAndDownload((progress) => {
@@ -132,9 +136,52 @@ export default function SettingsScreen() {
       <View className="flex-1 p-6 mt-8">
         <View className="bg-white dark:bg-gray-900 rounded-sm p-4 shadow-sm border border-gray-100 dark:border-gray-800 mb-6">
           <Text className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Private AI</Text>
-          <Text className="text-gray-900 dark:text-gray-100 text-base mb-1">
-            Model: Qwen3 0.6B Q4_K_M
-          </Text>
+          <View className="flex-row items-center mb-1">
+            <Text className="text-gray-900 dark:text-gray-100 text-base">
+              Model: Qwen3 0.6B Q4_K_M
+            </Text>
+            <Pressable onPress={() => setShowModelInfo(true)} className="p-1 active:opacity-50 ml-1">
+              <SymbolView name={{ ios: 'info.circle', android: 'info', web: 'info' } as any} tintColor="#9ca3af" size={16} />
+            </Pressable>
+          </View>
+
+          <Modal visible={showModelInfo} animationType="fade" transparent={true}>
+            <View className="flex-1 bg-black/60 items-center justify-center p-4">
+              <View className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-sm shadow-2xl border border-gray-200 dark:border-gray-800 p-6 overflow-hidden">
+                <View className="items-center mb-8">
+                  <View style={[Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 12px rgba(59, 130, 246, 0.8))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.8, shadowRadius: 12, shadowOffset: { width: 0, height: 0 } }]} className="mb-6">
+                    <SymbolView name={{ ios: 'cpu', android: 'memory', web: 'memory' } as any} tintColor="#3b82f6" size={48} />
+                  </View>
+                  <Text style={{ textShadowColor: 'rgba(59, 130, 246, 0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }} className="text-xl font-black text-blue-500 tracking-widest text-center mb-4 uppercase">Qwen3 0.6B Q4_K_M</Text>
+                  <Text className="text-gray-500 dark:text-gray-400 text-left self-start leading-relaxed font-medium mb-4">
+                    This AI model strikes the perfect balance for private, local journaling on everyday devices.
+                  </Text>
+                  
+                  <Text className="text-gray-700 dark:text-gray-300 font-bold self-start mb-2">Pros:</Text>
+                  <View className="self-start ml-2 mb-4">
+                    <Text className="text-gray-500 dark:text-gray-400 font-medium mb-1">• Runs completely locally (100% private)</Text>
+                    <Text className="text-gray-500 dark:text-gray-400 font-medium mb-1">• Tiny file size (~484 MB download)</Text>
+                    <Text className="text-gray-500 dark:text-gray-400 font-medium mb-1">• Fast enough to run directly in your browser or phone</Text>
+                  </View>
+
+                  <Text className="text-gray-700 dark:text-gray-300 font-bold self-start mb-2">Cons:</Text>
+                  <View className="self-start ml-2">
+                    <Text className="text-gray-500 dark:text-gray-400 font-medium mb-1">• Not as knowledgeable as large cloud models like ChatGPT</Text>
+                    <Text className="text-gray-500 dark:text-gray-400 font-medium mb-1">• Best suited for short text (like a ~500-word journal entry)</Text>
+                  </View>
+                </View>
+                
+                <View className="flex-row justify-end border-t border-gray-100 dark:border-gray-800 pt-5">
+                  <Pressable 
+                    onPress={() => setShowModelInfo(false)}
+                    className="bg-gray-100 dark:bg-gray-800 py-3 px-6 rounded-sm active:bg-gray-200 dark:active:bg-gray-700 w-full items-center"
+                  >
+                    <Text className="text-gray-900 dark:text-white font-bold tracking-widest uppercase text-xs">Got it</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </Modal>
           <Text className="text-gray-500 text-sm mb-1">
             Version: v1
           </Text>
@@ -142,10 +189,49 @@ export default function SettingsScreen() {
             Status: {modelInstalled ? 'Installed (~484 MB)' : 'Not installed'}
           </Text>
           {downloadLimit && (
-            <Text className="text-gray-500 text-sm mb-4">
-              Successful downloads this month: {downloadLimit.used} / {downloadLimit.total}
-            </Text>
+            <View className="flex-row items-center mb-4">
+              <Text className="text-gray-500 text-sm mr-2">
+                {Math.max(0, downloadLimit.total - downloadLimit.used)}/{downloadLimit.total} manual downloads remaining this month.
+              </Text>
+              <Pressable onPress={() => setShowLimitInfo(true)} className="p-1 active:opacity-50">
+                <SymbolView name={{ ios: 'info.circle', android: 'info', web: 'info' } as any} tintColor="#9ca3af" size={16} />
+              </Pressable>
+            </View>
           )}
+
+          <Modal visible={showLimitInfo} animationType="fade" transparent={true}>
+            <View className="flex-1 bg-black/60 items-center justify-center p-4">
+              <View className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-sm shadow-2xl border border-gray-200 dark:border-gray-800 p-6 overflow-hidden">
+                <View className="items-center mb-8">
+                  <View style={[Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 12px rgba(59, 130, 246, 0.8))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.8, shadowRadius: 12, shadowOffset: { width: 0, height: 0 } }]} className="mb-6">
+                    <SymbolView name={{ ios: 'info.circle.fill', android: 'info', web: 'info' } as any} tintColor="#3b82f6" size={48} />
+                  </View>
+                  <Text style={{ textShadowColor: 'rgba(59, 130, 246, 0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }} className="text-2xl font-black text-blue-500 tracking-widest mb-4">DOWNLOAD LIMIT</Text>
+                  <Text className="text-gray-500 dark:text-gray-400 text-center leading-relaxed font-medium mb-4">
+                    The AI model is a large file hosted on a secure server. We limit manual downloads to help manage our bandwidth costs.
+                  </Text>
+                  <Text className="text-gray-500 dark:text-gray-400 text-left self-start leading-relaxed font-medium">
+                    Once downloaded, it runs locally for free forever and stays on your device unless you:
+                  </Text>
+                  <View className="self-start mt-2 ml-2">
+                    <Text className="text-gray-500 dark:text-gray-400 font-medium">• Sign out of the app</Text>
+                    <Text className="text-gray-500 dark:text-gray-400 font-medium">• Clear browser/site data</Text>
+                    <Text className="text-gray-500 dark:text-gray-400 font-medium">• Manually remove it</Text>
+                  </View>
+                </View>
+                
+                <View className="flex-row justify-end border-t border-gray-100 dark:border-gray-800 pt-5">
+                  <Pressable 
+                    onPress={() => setShowLimitInfo(false)} 
+                    style={[Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }]} 
+                    className="flex-row items-center justify-center py-2 px-6 active:opacity-50"
+                  >
+                    <Text style={{ color: '#3b82f6' }} className="font-bold uppercase tracking-wider text-sm">Got it</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </Modal>
           
           {modelActionLoading && (
             <View className="mb-4 flex-row items-center gap-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-sm">
@@ -157,28 +243,19 @@ export default function SettingsScreen() {
           {!modelInstalled ? (
             <Pressable 
               onPress={handleDownloadModel}
-              disabled={modelActionLoading}
-              className="bg-blue-500 py-3 rounded-sm items-center active:opacity-50"
+              disabled={modelActionLoading || isOutOfDownloads}
+              className={`py-3 rounded-sm items-center active:opacity-50 ${modelActionLoading || isOutOfDownloads ? 'bg-gray-300 dark:bg-gray-800' : 'bg-blue-500'}`}
             >
-              <Text className="text-white font-bold tracking-widest uppercase text-xs">Download Model</Text>
+              <Text className={`${modelActionLoading || isOutOfDownloads ? 'text-gray-500' : 'text-white'} font-bold tracking-widest uppercase text-xs`}>Download Model</Text>
             </Pressable>
           ) : (
-            <View className="flex-row gap-3">
-              <Pressable 
-                onPress={handleDownloadModel}
-                disabled={modelActionLoading}
-                className="flex-1 bg-gray-100 dark:bg-gray-800 py-3 rounded-sm items-center active:opacity-50"
-              >
-                <Text className="text-gray-700 dark:text-gray-300 font-bold tracking-widest uppercase text-xs">Redownload</Text>
-              </Pressable>
-              <Pressable 
-                onPress={handleRemoveModel}
-                disabled={modelActionLoading}
-                className="flex-1 bg-red-500/10 dark:bg-red-900/20 py-3 rounded-sm items-center active:opacity-50"
-              >
-                <Text className="text-red-500 font-bold tracking-widest uppercase text-xs">Remove</Text>
-              </Pressable>
-            </View>
+            <Pressable 
+              onPress={handleRemoveModel}
+              disabled={modelActionLoading}
+              className="bg-red-500/10 dark:bg-red-900/20 py-3 rounded-sm items-center active:opacity-50"
+            >
+              <Text className="text-red-500 font-bold tracking-widest uppercase text-xs">Remove Model</Text>
+            </Pressable>
           )}
         </View>
 

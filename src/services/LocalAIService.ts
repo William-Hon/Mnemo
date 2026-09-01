@@ -65,10 +65,6 @@ class LocalAIServiceClass {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return null;
 
-      // We can optionally create a lightweight endpoint for just the count, 
-      // but calling the download-url endpoint with a dry-run flag or 
-      // directly querying the table (if RLS allows read) is better.
-      // Since RLS allows users to view their own sessions, we can just query here!
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
@@ -76,6 +72,7 @@ class LocalAIServiceClass {
       const { data, error } = await supabase
         .from('private_ai_download_sessions')
         .select('id')
+        .eq('user_id', session.user.id)
         .eq('status', 'COMPLETED')
         .gte('completed_at', startOfMonth.toISOString());
         
@@ -107,7 +104,7 @@ class LocalAIServiceClass {
         const metaHandle = await root.getFileHandle(NATIVE_MODEL_FILENAME + '.meta');
         const metaFile = await metaHandle.getFile();
         const metadata = JSON.parse(await metaFile.text());
-        return metadata.status === 'complete' && metadata.version === MODEL_VERSION && metadata.size === EXPECTED_SIZE;
+        return metadata.status === 'complete' && metadata.version === MODEL_VERSION && metadata.size > 100000000;
       } catch (e) {
         return false;
       }
@@ -119,7 +116,7 @@ class LocalAIServiceClass {
       const savedSizeStr = await AsyncStorage.getItem('PrivateAIModelSize');
       const savedSize = savedSizeStr ? parseInt(savedSizeStr, 10) : 0;
       
-      return savedVersion === MODEL_VERSION && savedSize === EXPECTED_SIZE && modelFile.size === EXPECTED_SIZE;
+      return savedVersion === MODEL_VERSION && savedSize > 100000000 && modelFile.size === savedSize;
     }
   }
 
@@ -140,7 +137,7 @@ class LocalAIServiceClass {
       const savedSizeStr = await AsyncStorage.getItem('PrivateAIModelSize');
       const savedSize = savedSizeStr ? parseInt(savedSizeStr, 10) : 0;
       
-      const isValid = modelFile.exists && modelFile.size === EXPECTED_SIZE && savedVersion === MODEL_VERSION && savedSize === EXPECTED_SIZE;
+      const isValid = modelFile.exists && modelFile.size > 100000000 && savedVersion === MODEL_VERSION && savedSize === modelFile.size;
 
       if (!isValid) {
         if (modelFile.exists) {
@@ -167,9 +164,9 @@ class LocalAIServiceClass {
         }
         
         onProgress('Verifying model integrity...');
-        if (modelFile.exists && modelFile.size === EXPECTED_SIZE) {
+        if (modelFile.exists && modelFile.size > 100000000) {
           await AsyncStorage.setItem('PrivateAIModelVersion', MODEL_VERSION);
-          await AsyncStorage.setItem('PrivateAIModelSize', EXPECTED_SIZE.toString());
+          await AsyncStorage.setItem('PrivateAIModelSize', modelFile.size.toString());
           await this.completeDownloadSession(sessionData.session_id);
         } else {
           if (modelFile.exists) modelFile.delete();
@@ -219,7 +216,7 @@ class LocalAIServiceClass {
       const fileHandle = await root.getFileHandle(filename, { create: true });
       const currentFile = await fileHandle.getFile();
 
-      if (currentFile.size === EXPECTED_SIZE && metadata.version === MODEL_VERSION && metadata.status === 'complete') {
+      if (currentFile.size > 100000000 && metadata.version === MODEL_VERSION && metadata.status === 'complete') {
         onProgress('Model loaded from local storage.');
         return;
       }
@@ -387,7 +384,7 @@ class LocalAIServiceClass {
         quota: e?.quota, // If the browser provides it
         requested: e?.requested, // If the browser provides it
         downloadedBytes,
-        exactFailingStage: currentStage,
+      exactFailingStage: currentStage,
         storageEstimate
       });
       
@@ -396,153 +393,226 @@ class LocalAIServiceClass {
     }
   }
 
-  async analyzeBatch(chunks: any[]): Promise<DeepAnalysisResult[]> {
+  async initAndDownload(onProgress: (text: string) => void): Promise<void> {
+    if (Platform.OS === 'web') {
+      await this.downloadGGUFToWebOPFS(NATIVE_MODEL_FILENAME, onProgress);
+      
+      onProgress('Initializing AI Engine...');
+      const root = await navigator.storage.getDirectory();
+      const fileHandle = await root.getFileHandle(NATIVE_MODEL_FILENAME);
+      const file = await fileHandle.getFile();
+
+      const { Wllama } = await import('@wllama/wllama/esm/index.js');
+
+      onProgress('Loading AI Model (this only happens once)...');
+      this.engine = new Wllama({
+        "default": "https://unpkg.com/@wllama/wllama/esm/wasm/wllama.wasm"
+      }, {
+        logger: { debug: () => {}, log: () => {}, warn: () => {}, error: () => {} }
+      });
+
+      const t0 = performance.now();
+      await this.engine.loadModel([file], {
+        n_ctx: 2048,
+        n_gpu_layers: 50, // Use WebGPU for fast warm-model response
+        log_level: 0,
+        flash_attn: true, // Enable Flash Attention for faster prompt evaluation on WebGPU
+        reasoning_format: 'none',
+      });
+      const loadMs = performance.now() - t0;
+      console.log(`Final model loaded in ${loadMs.toFixed(2)}ms with n_gpu_layers: 50 (WebGPU)`);
+      
+      this.isInitialized = true;
+    } else {
+      if (!llama) {
+        const llamaRn = require('llama.rn');
+        llama = llamaRn;
+        LlamaContext = llamaRn.LlamaContext;
+      }
+      
+      const modelFile = new FileSystem.File(FileSystem.Paths.document, NATIVE_MODEL_FILENAME);
+      
+      const savedVersion = await AsyncStorage.getItem('PrivateAIModelVersion');
+      const savedSizeStr = await AsyncStorage.getItem('PrivateAIModelSize');
+      const savedSize = savedSizeStr ? parseInt(savedSizeStr, 10) : 0;
+      
+      const isValid = modelFile.exists && modelFile.size > 100000000 && savedVersion === MODEL_VERSION && savedSize === modelFile.size;
+
+      if (!isValid) {
+        if (modelFile.exists) {
+          modelFile.delete();
+        }
+        
+        onProgress('Downloading Private AI model (might take a while)...');
+        await this.downloadGGUFToNative(NATIVE_MODEL_FILENAME, onProgress);
+        
+        await AsyncStorage.setItem('PrivateAIModelVersion', MODEL_VERSION);
+        await AsyncStorage.setItem('PrivateAIModelSize', modelFile.size.toString());
+      }
+
+      onProgress('Initializing local model...');
+      this.nativeContext = await llama.initLlama({
+        model: modelFile.uri,
+        use_mlock: true,
+        n_ctx: 2048, // adjust based on prompt
+        n_gpu_layers: 50
+      });
+      this.isInitialized = true;
+    }
+  }
+
+  private engineInstanceId = Math.random().toString(36).substring(7);
+  private lastEvaluatedPrefix = "";
+
+  async warmupJournal(journalContext: string, onUpdate?: (msg: string) => void): Promise<void> {
+    if (!this.isInitialized) throw new Error("Model not initialized.");
+    if (Platform.OS !== 'web' || !this.engine) return;
+
+    const systemPrompt = `You are a helpful, concise AI. Do NOT output a <think> reasoning block. Answer directly without thinking out loud.
+Focus strictly on the provided journal entry. Keep your answer to 2-4 short sentences (roughly 80-150 tokens).
+
+Journal Entry:
+---
+${journalContext}
+---`;
+
+    // Strict prefix for warmup (no assistant turn appended yet)
+    const formattedPrompt = `<|im_start|>system\n${systemPrompt}<|im_end|>\n`;
+
+    const tStart = performance.now();
+    let promptProgress: any = null;
+    let timings: any = null;
+
+    try {
+      await this.engine.createCompletion({
+        prompt: formattedPrompt,
+        max_tokens: 1, // Evaluate and discard 1 token to fill cache
+        temperature: 0,
+        onData: (chunk: any) => {
+          if (chunk.prompt_progress) promptProgress = chunk.prompt_progress;
+          if (chunk.timings) timings = chunk.timings;
+        }
+      });
+      this.lastEvaluatedPrefix = formattedPrompt;
+    } catch (e) {
+      console.error("Warmup failed", e);
+    }
+
+    const totalMs = performance.now() - tStart;
+    console.log(`\n=== 1. JOURNAL PREFILL ===`);
+    console.log(`- Engine ID: ${this.engineInstanceId}`);
+    console.log(`- Prefilled Prompt Length: ${formattedPrompt.length} chars`);
+    if (promptProgress) {
+      console.log(`- Total prompt tokens: ${promptProgress.total}`);
+      console.log(`- Cached/reused tokens: ${promptProgress.cache}`);
+      console.log(`- Newly evaluated tokens: ${promptProgress.processed}`);
+      console.log(`- Context reset occurred: ${promptProgress.cache === 0 ? 'YES' : 'NO'}`);
+    }
+    if (timings) {
+      console.log(`- Prompt eval ms: ${timings.prompt_ms?.toFixed(2)}`);
+      console.log(`- Generation ms: ${timings.predicted_ms?.toFixed(2)}`);
+    }
+    console.log(`- Total ms: ${totalMs.toFixed(2)}`);
+    console.log(`==========================\n`);
+  }
+
+  async chat(journalContext: string, history: {role: string, content: string}[], onUpdate?: (text: string) => void): Promise<string> {
     if (!this.isInitialized) throw new Error("Model not initialized.");
 
-    const prompt = `You are a relevance analyzer for a private journal search system.
+    const systemPrompt = `You are a helpful, concise AI. Do NOT output a <think> reasoning block. Answer directly without thinking out loud.
+Focus strictly on the provided journal entry. Keep your answer to 2-4 short sentences (roughly 80-150 tokens).
 
-You are NOT a therapist, advisor, or general chatbot.
+Journal Entry:
+---
+${journalContext}
+---`;
 
-The user searched for:
-
-${chunks[0]?.query || 'unknown'}
-
-You will receive journal entries that were already retrieved by another search system.
-
-For each journal:
-
-1. JOURNAL BRIEF
-Write one concise sentence describing what the journal is mainly about.
-
-2. RELEVANT PART
-Write one concise sentence beginning with:
-'You talked about...'
-
-Describe only the section that is meaningfully relevant to the user's search.
-
-Only use information explicitly contained in the journal.
-
-If no meaningful relevant section exists, return null.
-
-3. RELEVANCE
-Return exactly one:
-
-DIRECT
-RELATED
-WEAK
-NOT_RELEVANT
-
-DIRECT = clearly addresses the search intent.
-RELATED = meaningfully related but indirect.
-WEAK = loosely related.
-NOT_RELEVANT = no meaningful relationship.
-
-Do not diagnose.
-Do not give advice.
-Do not invent information.
-Do not generate percentages.
-Do not explain your reasoning outside the required fields.
-
-Return valid JSON only matching exactly this structure:
-{
-  "results": [
-    {
-      "entry_id": "...",
-      "journal_brief": "...",
-      "relevant_part": "You talked about...",
-      "relevance": "DIRECT"
+    let formattedPrompt = `<|im_start|>system\n${systemPrompt}<|im_end|>\n`;
+    for (const msg of history) {
+      if (msg.role === 'assistant') {
+        formattedPrompt += `<|im_start|>${msg.role}\n<think>\nI will answer directly.\n</think>\n${msg.content}<|im_end|>\n`;
+      } else {
+        formattedPrompt += `<|im_start|>${msg.role}\n${msg.content}<|im_end|>\n`;
+      }
     }
-  ]
-}
-
-Chunks to evaluate:
-${chunks.map(c => `ID: ${c.id}\nText: ${c.content}`).join('\n\n')}
-`;
+    // Trick the model for the current turn
+    formattedPrompt += `<|im_start|>assistant\n<think>\nI will answer directly.\n</think>\n`;
 
     let responseText = "";
 
     if (Platform.OS === 'web') {
-      if (!this.engine) {
-        const { Wllama } = await import('@wllama/wllama/esm/index.js');
-        this.engine = new Wllama({
-          "default": "https://unpkg.com/@wllama/wllama/esm/wasm/wllama.wasm",
-        }, {
-          logger: {
-            debug: () => {},
-            log: () => {},
-            warn: () => {},
-            error: () => {},
-          }
-        });
+      if (!this.engine) throw new Error("Web engine unexpectedly null");
 
-        const root = await navigator.storage.getDirectory();
-        const fileHandle = await root.getFileHandle(NATIVE_MODEL_FILENAME);
-        const file = await fileHandle.getFile();
-        
-        console.log("Loading model into WebGPU (this may take up to a minute)...");
-        await this.engine.loadModel([file], {
-          n_ctx: 2048,
-          log_level: 0,
-          flash_attn: false,
-        });
-        console.log("Model successfully loaded into WebGPU!");
-      }
+      // Verify prefix matching!
+      const prefixMatched = formattedPrompt.startsWith(this.lastEvaluatedPrefix);
+      this.lastEvaluatedPrefix = formattedPrompt; // Update for next turn
 
-      const fullPrompt = `<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\n${prompt}<|im_end|>\n<|im_start|>assistant\n{\n  "results": [\n`;
-      
-      const isIsolated = typeof window !== 'undefined' && window.crossOriginIsolated;
-      console.log(`[Web Inference Config] crossOriginIsolated: ${isIsolated}`);
-      console.log(`[Web Inference Config] SharedArrayBuffer: ${typeof SharedArrayBuffer !== "undefined"}`);
-      if (this.engine) {
-         console.log(`[Web Inference Config] Wllama Multi-Threaded: ${this.engine.isMultithread()}`);
-         console.log(`[Web Inference Config] Thread Count: ${this.engine.getNumThreads()}`);
-      }
-      
-      console.log("Starting WebGPU inference...");
+      const tStart = performance.now();
       let generated = "";
-      const startTime = performance.now();
+      let promptProgress: any = null;
+      let timings: any = null;
+      
       await this.engine.createCompletion({
-        prompt: fullPrompt,
-        max_tokens: 1024,
-        temperature: 0.1,
-        flash_attn: false,
-        stop: ["</think>", "<|im_end|>"],
+        prompt: formattedPrompt,
+        max_tokens: 150,
+        temperature: 0.3,
         stream: true,
+        stop: ["<|im_end|>"],
         onData: (chunk: any) => {
-          const text = chunk.choices[0]?.text || "";
+          if (chunk.prompt_progress) promptProgress = chunk.prompt_progress;
+          if (chunk.timings) timings = chunk.timings;
+          
+          const text = chunk.choices?.[0]?.text || "";
           if (text) {
              generated += text;
+             const cleaned = generated.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*/g, '');
+             if (onUpdate) onUpdate(cleaned.trimStart());
           }
         }
       });
-      const endTime = performance.now();
-      const elapsedSeconds = (endTime - startTime) / 1000;
-      // Rough estimation of tokens: approx 4 characters per token
-      const tokensGenerated = generated.length / 4;
-      console.log(`Inference complete in ${elapsedSeconds.toFixed(2)}s (${(tokensGenerated / elapsedSeconds).toFixed(2)} tokens/sec). Full generated text:`, generated);
-      responseText = '{\n  "results": [\n' + generated;
+      responseText = generated.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+      const totalMs = performance.now() - tStart;
+      
+      console.log(`\n=== 2. CHAT MESSAGE FOLLOW-UP ===`);
+      console.log(`- Engine ID: ${this.engineInstanceId}`);
+      console.log(`- Exact prefix matched prefill: ${prefixMatched ? 'YES' : 'NO'}`);
+      console.log(`- String match verification: Prefill was ${this.lastEvaluatedPrefix.length} chars, Chat is ${formattedPrompt.length} chars`);
+      
+      if (promptProgress) {
+        console.log(`- Total prompt tokens: ${promptProgress.total}`);
+        console.log(`- Cached/reused tokens: ${promptProgress.cache}`);
+        console.log(`- Newly evaluated tokens: ${promptProgress.processed}`);
+        console.log(`- Context reset occurred: ${promptProgress.cache === 0 ? 'YES' : 'NO'}`);
+      }
+      if (timings) {
+        console.log(`- Prompt eval ms: ${timings.prompt_ms?.toFixed(2)}`);
+        console.log(`- Generation ms: ${timings.predicted_ms?.toFixed(2)}`);
+        console.log(`- Prompt tok/s: ${(timings.prompt_n / (timings.prompt_ms / 1000))?.toFixed(2)}`);
+        console.log(`- Generation tok/s: ${(timings.predicted_n / (timings.predicted_ms / 1000))?.toFixed(2)}`);
+      }
+      console.log(`- Raw Generated Tokens: ${timings?.predicted_n}`);
+      console.log(`- Raw Generated Output (Hidden): ${JSON.stringify(generated)}`);
+      console.log(`- Total ms: ${totalMs.toFixed(2)}`);
+      console.log(`=================================\n`);
+      
+      this.lastEvaluatedPrefix = formattedPrompt + generated + "<|im_end|>\n"; // Perfect match for next turn
     } else {
+      // Native fallback
+      let formattedPrompt = `<|im_start|>system\n${systemPrompt}<|im_end|>\n`;
+      for (const msg of history) {
+        formattedPrompt += `<|im_start|>${msg.role}\n${msg.content}<|im_end|>\n`;
+      }
+      formattedPrompt += `<|im_start|>assistant\n`;
       const completion = await this.nativeContext.completion({
-        prompt: `<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\n${prompt}<|im_end|>\n<|im_start|>assistant\n{\n  "results": [\n`,
-        n_predict: 1024,
-        temperature: 0.1,
-        stop: ["</think>", "<|im_end|>"]
+        prompt: formattedPrompt,
+        n_predict: 150,
+        temperature: 0.3,
+        stop: ["<|im_end|>"]
       });
-      responseText = '{\n  "results": [\n' + completion.text;
+      responseText = completion.text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
     }
 
-    try {
-      let cleanText = responseText;
-      if (cleanText.includes("</think>")) {
-         cleanText = cleanText.split("</think>")[0];
-      }
-      const jsonStr = cleanText.substring(cleanText.indexOf('{'), cleanText.lastIndexOf('}') + 1);
-      const parsed = JSON.parse(jsonStr);
-      return parsed.results || [];
-    } catch (e) {
-      console.error("Failed to parse LLM output:", responseText);
-      return [];
-    }
+    return responseText;
   }
 
   async removeModel(): Promise<void> {

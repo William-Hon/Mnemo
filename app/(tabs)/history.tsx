@@ -118,14 +118,24 @@ export default function HistoryScreen() {
   // Bulk Actions
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmAction, setConfirmAction] = useState<'delete' | 'export' | null>(null);
+  const [hasModel, setHasModel] = useState(false);
+  const [showAiTooltip, setShowAiTooltip] = useState(false);
+
+  const checkModel = async () => {
+    const isDownloaded = await LocalAIService.isModelDownloaded();
+    setHasModel(isDownloaded);
+  };
 
   // Single Reading Modal
   const [selectedEntryToRead, setSelectedEntryToRead] = useState<any>(null);
 
-  // Deep Analysis
-  const [deepAnalysisState, setDeepAnalysisState] = useState<'idle' | 'downloading' | 'analyzing' | 'complete' | 'error'>('idle');
-  const [deepAnalysisProgress, setDeepAnalysisProgress] = useState<string>('');
-  const [showDeepAnalysisWarning, setShowDeepAnalysisWarning] = useState(false);
+  // Chat Feature
+  const scrollViewRef = React.useRef<ScrollView>(null);
+  const [chatHistory, setChatHistory] = useState<{role: 'user'|'assistant', content: string}[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isChatThinking, setIsChatThinking] = useState(false);
+  const [chatLoadingText, setChatLoadingText] = useState('THINKING...');
+  const [showChat, setShowChat] = useState(false);
 
   const { user } = useAuth();
 
@@ -157,118 +167,112 @@ export default function HistoryScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchContent();
+      checkModel();
     }, [user])
   );
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       fetchContent();
-      setDeepAnalysisState('idle');
-      setDeepAnalysisProgress('');
     }, 500);
     return () => clearTimeout(delayDebounceFn);
   }, [startDate, endDate, query]);
 
-  const startDeepAnalysis = async () => {
+  const askPrivateLLM = async () => {
     try {
       const isCompatible = await LocalAIService.checkCompatibility();
       if (!isCompatible) {
-        if (Platform.OS === 'web') {
-          window.alert("Private AI is not supported on this device yet (requires WebGPU on web).");
-        } else {
-          Alert.alert("Not Supported", "Private AI is not supported on this device yet (requires WebGPU on web).");
-        }
+        Alert.alert("Not Supported", "Private AI is not supported on this device yet.");
         return;
       }
-      
       const isDownloaded = await LocalAIService.isModelDownloaded();
       if (!isDownloaded) {
-        setShowDeepAnalysisWarning(true);
+        Alert.alert("Model Not Downloaded", "Please go to the Settings tab to download the AI model first.");
         return;
       }
+
+      setShowChat(true);
       
-      await performDeepAnalysis();
-    } catch (e: any) {
-      setDeepAnalysisState('error');
-      if (Platform.OS === 'web') {
-        window.alert("Deep Analysis Error: " + e.message);
-      } else {
-        Alert.alert("Deep Analysis Error", e.message);
+      // Auto-scroll to bottom of modal
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 300);
+      
+      setIsChatThinking(true);
+      try {
+        if (!LocalAIService.isInitialized) {
+          setChatLoadingText('LOADING AI...');
+          await LocalAIService.initAndDownload(() => {});
+        }
+        
+        setChatLoadingText('READING YOUR JOURNAL...');
+        const journalContext = selectedEntryToRead?.fullContent || selectedEntryToRead?.content || '';
+        await LocalAIService.warmupJournal(journalContext);
+        
+        setChatHistory([
+          { role: 'assistant', content: "Journal loaded. Ask anything about it." }
+        ]);
+      } catch (e: any) {
+        Alert.alert("AI Error", e.message);
+      } finally {
+        setIsChatThinking(false);
       }
+    } catch (e: any) {
+      Alert.alert("AI Error", e.message);
     }
   };
 
-  const performDeepAnalysis = async () => {
-    setDeepAnalysisState('downloading');
-    setDeepAnalysisProgress('');
-    
+  const sendMessageToLLM = async () => {
+    if (!chatInput.trim() || isChatThinking) return;
+
+    const userMessage = chatInput.trim();
+    setChatInput('');
+    // Insert user message and an empty placeholder for the assistant
+    setChatHistory(prev => [
+      ...prev, 
+      { role: 'user', content: userMessage },
+      { role: 'assistant', content: '' }
+    ]);
+    setChatLoadingText('THINKING...');
+    setIsChatThinking(true);
+
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+
     try {
       if (!LocalAIService.isInitialized) {
-        await LocalAIService.initAndDownload((progressText) => {
-          setDeepAnalysisProgress(progressText);
+        await LocalAIService.initAndDownload(() => {});
+      }
+      const journalContext = selectedEntryToRead?.fullContent || selectedEntryToRead?.content || '';
+      
+      // We only want to send the actual history, not the empty placeholder we just added
+      const newHistory = chatHistory.concat([{ role: 'user', content: userMessage }]) as {role: 'user'|'assistant', content: string}[];
+      
+      const response = await LocalAIService.chat(journalContext, newHistory, (text) => {
+        // Stream the text into the placeholder
+        setChatHistory(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1].content = text;
+          return updated;
         });
-      }
-
-      setDeepAnalysisState('analyzing');
-
-      // Group entries by actual journal ID to avoid evaluating overlapping chunks independently
-      const uniqueJournalsMap = new Map();
-      entries.forEach(e => {
-        const id = e.entry_id || e.id;
-        if (!uniqueJournalsMap.has(id)) {
-          uniqueJournalsMap.set(id, { id, content: e.content, query });
-        } else {
-          uniqueJournalsMap.get(id).content += '\n' + e.content;
-        }
       });
-      const uniqueJournals = Array.from(uniqueJournalsMap.values());
-
-      setDeepAnalysisProgress(`Analyzing journals 0 / ${uniqueJournals.length}`);
-
-      const batchSize = 5;
-      let allResults: any[] = [];
       
-      for (let i = 0; i < uniqueJournals.length; i += batchSize) {
-        const batch = uniqueJournals.slice(i, i + batchSize);
-        const results = await LocalAIService.analyzeBatch(batch);
-        allResults = [...allResults, ...results];
-        
-        setDeepAnalysisProgress(`Analyzing journals ${Math.min(i + batchSize, uniqueJournals.length)} / ${uniqueJournals.length}`);
-      }
-      
-      const relevanceMap = { 'DIRECT': 3, 'RELATED': 2, 'WEAK': 1, 'NOT_RELEVANT': 0 };
-
-      const newEntries = [...entries].map(entry => {
-        const id = entry.entry_id || entry.id;
-        const analysis = allResults.find(r => r.entry_id === id);
-        return {
-          ...entry,
-          deepRelevance: analysis ? (relevanceMap[analysis.relevance as keyof typeof relevanceMap] ?? -1) : -1,
-          journalBrief: analysis?.journal_brief,
-          relevantPart: analysis?.relevant_part
-        };
+      // Final overwrite just in case
+      setChatHistory(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1].content = response;
+        return updated;
       });
-
-      newEntries.sort((a, b) => {
-        const rankA = a.deepRelevance ?? -1;
-        const rankB = b.deepRelevance ?? -1;
-        if (rankA !== rankB) return rankB - rankA;
-        return (b.rrfScore || 0) - (a.rrfScore || 0);
-      });
-
-      setEntries(newEntries);
-      setDeepAnalysisState('complete');
-      
-      // Lazily release model from RAM
-      setTimeout(() => LocalAIService.release(), 5000);
-      
     } catch (e: any) {
-      setDeepAnalysisState('error');
-      if (Platform.OS === 'web') {
-        window.alert("Analysis Error: " + e.message);
-      } else {
-        Alert.alert("Analysis Error", e.message);
-      }
+      Alert.alert("AI Error", e.message);
+      // Remove the empty assistant message if it failed
+      setChatHistory(prev => prev.slice(0, -1));
+    } finally {
+      setIsChatThinking(false);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
     }
   };
 
@@ -546,8 +550,18 @@ export default function HistoryScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-black">
-      <View className="flex-1 p-4">
+    <SafeAreaView 
+      className="flex-1 bg-gray-50 dark:bg-black"
+      style={Platform.OS === 'web' ? { height: '100vh' } as any : {}}
+    >
+      <ScrollView 
+        className="flex-1"
+        contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+        showsVerticalScrollIndicator={true}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         
         {/* Top Header / Action Bar */}
         {selectedIds.size > 0 ? (
@@ -567,161 +581,146 @@ export default function HistoryScreen() {
                 onPress={confirmBulkExport} 
                 className="flex-row items-center gap-2 active:opacity-50"
               >
-                <SymbolView name={{ ios: 'square.and.arrow.up', android: 'ios_share', web: 'ios_share' } as any} tintColor="#6b7280" size={16} />
-                <Text className="text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-wider hidden sm:flex">Export</Text>
+                <SymbolView name={{ ios: 'square.and.arrow.up', android: 'share', web: 'share' } as any} tintColor="#6b7280" size={16} />
+                <Text className="text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-wider hidden sm:flex">Export All</Text>
               </Pressable>
               <Pressable 
                 onPress={confirmBulkDelete} 
                 className="flex-row items-center gap-2 active:opacity-50"
               >
-                <SymbolView name={{ ios: 'trash', android: 'delete', web: 'delete' } as any} tintColor="#6b7280" size={16} />
-                <Text className="text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-wider hidden sm:flex">Delete</Text>
+                <SymbolView name={{ ios: 'trash', android: 'delete', web: 'delete' } as any} tintColor="#ef4444" size={16} />
+                <Text className="text-red-500 text-xs font-bold uppercase tracking-wider hidden sm:flex">Delete All</Text>
               </Pressable>
             </View>
           </View>
         ) : (
-          <>
-            <View className="flex-row items-center bg-white dark:bg-gray-900 p-2 rounded-sm border border-gray-200 dark:border-gray-800 shadow-sm mb-3 mt-8">
-              <TextInput
-                className="flex-1 px-4 py-2 text-base dark:text-white"
-                placeholder="Search for specific journals"
-                placeholderTextColor="#9ca3af"
-                value={query}
-                onChangeText={setQuery}
-                returnKeyType="search"
-              />
-              {query.trim().length > 0 && (
-                <Pressable onPress={() => { setQuery(''); Keyboard.dismiss(); }} className="p-2">
-                  <SymbolView name={{ ios: 'xmark.circle.fill', android: 'cancel', web: 'cancel' } as any} tintColor="#9ca3af" size={20} />
-                </Pressable>
-              )}
-            </View>
+          <View className="flex-row justify-between items-center mb-6 mt-8">
+            <Text className="text-gray-900 dark:text-white font-bold text-2xl tracking-tight">Journals</Text>
+          </View>
+        )}
 
-              <View className="flex-row mb-4 items-center justify-between relative z-10 w-full">
-                <View className="flex-row items-center gap-3">
-                  <View className="relative z-20">
-                    <Pressable 
-                      onPress={() => setShowDatePicker(true)}
-                      className={`flex-row items-center bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded-sm gap-2 ${(startDate || endDate) ? 'bg-blue-100 dark:bg-blue-900/50' : ''}`}
-                    >
-                      <SymbolView name={{ ios: 'calendar', android: 'calendar_today', web: 'calendar_today' } as any} tintColor={(startDate || endDate) ? '#3b82f6' : '#9ca3af'} size={14} />
-                      <Text className={`text-xs font-semibold ${(startDate || endDate) ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500'}`}>
-                        {(startDate || endDate) ? 'Filtered' : 'Date Range'}
-                      </Text>
-                    </Pressable>
-                    
-                    {/* Popover Calendar */}
-                    {showDatePicker && (
-                      <View 
-                        style={{ 
-                          transform: [{ scale: calendarScale }], 
-                          transformOrigin: 'top left' 
-                        } as any}
-                        className="absolute top-10 left-0 w-[280px] bg-white dark:bg-gray-900 rounded-sm shadow-xl border border-gray-200 dark:border-gray-800 p-3 z-50"
-                      >
-                        <SimpleCalendar tempStart={tempStart} setTempStart={setTempStart} tempEnd={tempEnd} setTempEnd={setTempEnd} />
-                        
-                        <View className="flex-col gap-2 mb-3">
-                          <TextInput 
-                            value={tempStart} 
-                            onChangeText={setTempStart} 
-                            placeholder="Start Date (YYYY-MM-DD)" 
-                            placeholderTextColor="#9ca3af" 
-                            className="w-full bg-gray-100 dark:bg-gray-800 p-2 text-xs rounded-sm dark:text-white" 
-                          />
-                          <TextInput 
-                            value={tempEnd} 
-                            onChangeText={setTempEnd} 
-                            placeholder="End Date (YYYY-MM-DD)" 
-                            placeholderTextColor="#9ca3af" 
-                            className="w-full bg-gray-100 dark:bg-gray-800 p-2 text-xs rounded-sm dark:text-white" 
-                          />
-                        </View>
+        {/* Search and Filters */}
+        <View className="flex-row items-center gap-3 mb-6 relative z-50">
+          <View className="flex-1 flex-row items-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-sm px-4 h-12 shadow-sm">
+            <SymbolView name={{ ios: 'magnifyingglass', android: 'search', web: 'search' } as any} tintColor="#9ca3af" size={20} />
+            <TextInput
+              className="flex-1 ml-3 text-gray-900 dark:text-white text-base h-full outline-none"
+              placeholder="Search for specific journals"
+              placeholderTextColor="#9ca3af"
+              value={query}
+              onChangeText={setQuery}
+              style={Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}}
+            />
+            {query.length > 0 && (
+              <Pressable onPress={() => setQuery('')} className="p-1">
+                <SymbolView name={{ ios: 'xmark.circle.fill', android: 'cancel', web: 'cancel' } as any} tintColor="#9ca3af" size={16} />
+              </Pressable>
+            )}
+          </View>
+          
+          <View className="relative z-50">
+            <Pressable 
+              onPress={() => setShowDatePicker(!showDatePicker)}
+              className={`flex-row items-center justify-center bg-white dark:bg-gray-900 border px-4 h-12 rounded-sm shadow-sm ${
+                startDate || endDate ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-800'
+              }`}
+            >
+              <SymbolView name={{ ios: 'calendar', android: 'calendar_today', web: 'calendar_today' } as any} tintColor={startDate || endDate ? '#3b82f6' : '#9ca3af'} size={18} />
+              <Text className={`ml-2 text-sm font-bold ${startDate || endDate ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                Date Range
+              </Text>
+            </Pressable>
 
-                        <View className="flex-row justify-between border-t border-gray-100 dark:border-gray-800 pt-3 mt-1">
-                          <Pressable onPress={clearDateFilter} className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-sm">
-                            <Text className="text-gray-600 dark:text-gray-300 text-xs font-bold">Clear</Text>
-                          </Pressable>
-                          <View className="flex-row gap-2">
-                            <Pressable onPress={() => setShowDatePicker(false)} className="px-3 py-1.5 rounded-sm">
-                              <Text className="text-gray-500 text-xs font-bold">Cancel</Text>
-                            </Pressable>
-                            <Pressable onPress={applyDateFilter} className="bg-blue-500 px-3 py-1.5 rounded-sm">
-                              <Text className="text-white text-xs font-bold">Apply</Text>
-                            </Pressable>
-                          </View>
-                        </View>
-                      </View>
-                    )}
-                  </View>
+            {/* Simple Date Picker Dropdown */}
+            {showDatePicker && (
+              <View 
+                style={{ 
+                  transform: [{ scale: calendarScale }], 
+                  transformOrigin: 'top left' 
+                } as any}
+                className="absolute top-10 left-0 w-[280px] bg-white dark:bg-gray-900 rounded-sm shadow-xl border border-gray-200 dark:border-gray-800 p-3 z-50"
+              >
+                <SimpleCalendar tempStart={tempStart} setTempStart={setTempStart} tempEnd={tempEnd} setTempEnd={setTempEnd} />
+                
+                <View className="flex-col gap-2 mb-3">
+                  <TextInput 
+                    value={tempStart} 
+                    onChangeText={setTempStart} 
+                    placeholder="Start Date (YYYY-MM-DD)" 
+                    placeholderTextColor="#9ca3af" 
+                    className="w-full bg-gray-100 dark:bg-gray-800 p-2 text-xs rounded-sm dark:text-white" 
+                  />
+                  <TextInput 
+                    value={tempEnd} 
+                    onChangeText={setTempEnd} 
+                    placeholder="End Date (YYYY-MM-DD)" 
+                    placeholderTextColor="#9ca3af" 
+                    className="w-full bg-gray-100 dark:bg-gray-800 p-2 text-xs rounded-sm dark:text-white" 
+                  />
+                </View>
 
-                  <Pressable 
-                    onPress={() => {
-                      if (selectedIds.size > 0) {
-                        setSelectedIds(new Set());
-                      } else {
-                        setSelectedIds(new Set(entries.map(e => e.entry_id || e.id)));
-                      }
-                    }}
-                    className={`flex-row items-center bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded-sm gap-2 ${selectedIds.size > 0 ? 'bg-blue-100 dark:bg-blue-900/50' : ''}`}
-                  >
-                    <SymbolView name={{ ios: selectedIds.size > 0 ? 'checkmark.circle.fill' : 'checkmark.circle', android: 'check_circle', web: 'check_circle' } as any} tintColor={selectedIds.size > 0 ? '#3b82f6' : '#9ca3af'} size={14} />
-                    <Text className={`text-xs font-semibold ${selectedIds.size > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500'}`}>
-                      {selectedIds.size > 0 ? 'Deselect All' : 'Select All'}
-                    </Text>
+                <View className="flex-row justify-between border-t border-gray-100 dark:border-gray-800 pt-3 mt-1">
+                  <Pressable onPress={clearDateFilter} className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-sm">
+                    <Text className="text-gray-600 dark:text-gray-300 text-xs font-bold">Clear</Text>
                   </Pressable>
+                  <View className="flex-row gap-2">
+                    <Pressable onPress={() => setShowDatePicker(false)} className="px-3 py-1.5 rounded-sm">
+                      <Text className="text-gray-500 text-xs font-bold">Cancel</Text>
+                    </Pressable>
+                    <Pressable onPress={applyDateFilter} className="bg-blue-500 px-3 py-1.5 rounded-sm">
+                      <Text className="text-white text-xs font-bold">Apply</Text>
+                    </Pressable>
+                  </View>
                 </View>
               </View>
-          </>
-        )}
-        
+            )}
+          </View>
+
+          <Pressable 
+            onPress={() => {
+              if (selectedIds.size > 0) {
+                setSelectedIds(new Set());
+              } else {
+                setSelectedIds(new Set(entries.map(e => e.entry_id || e.id)));
+              }
+            }}
+            className={`flex-row items-center justify-center bg-white dark:bg-gray-900 border px-4 h-12 rounded-sm shadow-sm ${
+              selectedIds.size > 0 ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-800'
+            }`}
+          >
+            <SymbolView 
+              name={{ 
+                ios: selectedIds.size > 0 ? 'checkmark.circle.fill' : 'checkmark.circle', 
+                android: selectedIds.size > 0 ? 'check_circle' : 'check_circle_outline', 
+                web: selectedIds.size > 0 ? 'check_circle' : 'check_circle_outline' 
+              } as any} 
+              tintColor={selectedIds.size > 0 ? '#3b82f6' : '#9ca3af'} 
+              size={18} 
+            />
+            <Text className={`ml-2 text-sm font-bold ${selectedIds.size > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`}>
+              {selectedIds.size > 0 ? 'Deselect All' : 'Select All'}
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Content Area */}
         {loading && !refreshing && entries.length === 0 ? (
-          <View className="flex-1 items-center justify-center -z-10">
+          <View className="items-center justify-center mt-20">
             <ActivityIndicator size="large" />
           </View>
         ) : entries.length === 0 ? (
-          <View className="flex-1 items-center justify-center -z-10">
+          <View className="items-center justify-center mt-20">
             <Text className="text-gray-500 dark:text-gray-400">
               {isSearching ? "No matching entries found." : "Your journal is empty."}
             </Text>
           </View>
         ) : (
-          <View className="flex-1 -z-10 relative">
-            {isSearching && entries.length > 0 && (
-              <View className="mb-4 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 rounded-sm">
-                <View className="flex-row items-center justify-between mb-2">
-                  <View className="flex-col flex-1 pr-2">
-                    <Text className="text-gray-900 dark:text-white font-bold tracking-widest uppercase mb-1">Deep Analysis</Text>
-                    <Text className="text-gray-500 text-xs leading-relaxed">Uses private on-device AI to rerank by relevance.</Text>
-                  </View>
-                  <Pressable 
-                    onPress={startDeepAnalysis} 
-                    disabled={deepAnalysisState === 'downloading' || deepAnalysisState === 'analyzing' || deepAnalysisState === 'complete'}
-                    className={`px-4 py-2 rounded-sm ${deepAnalysisState === 'complete' ? 'bg-green-600' : 'bg-blue-500 active:bg-blue-600'}`}
-                  >
-                    <Text className="text-white font-bold text-xs uppercase tracking-wider">
-                      {deepAnalysisState === 'idle' ? 'Analyze' : deepAnalysisState === 'downloading' ? '...' : deepAnalysisState === 'analyzing' ? '...' : 'Done'}
-                    </Text>
-                  </Pressable>
-                </View>
-                {(deepAnalysisState === 'downloading' || deepAnalysisState === 'analyzing') && (
-                  <View className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-800 flex-row items-center justify-between">
-                    <Text className="text-blue-500 text-xs font-bold uppercase">{deepAnalysisProgress}</Text>
-                    <ActivityIndicator size="small" color="#3b82f6" />
-                  </View>
-                )}
-              </View>
-            )}
-            <FlatList
-              data={entries}
-              keyExtractor={(item) => item.id}
-              renderItem={renderItem}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 100 }}
-              refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-              }
-            />
+          <View className="relative">
+            {entries.map((item, index) => (
+              <React.Fragment key={item.id}>
+                {renderItem({ item, index })}
+              </React.Fragment>
+            ))}
             {loading && !refreshing && (
               <View className="absolute inset-0 bg-white/50 dark:bg-black/50 items-center justify-center z-50">
                 <ActivityIndicator size="large" />
@@ -729,7 +728,7 @@ export default function HistoryScreen() {
             )}
           </View>
         )}
-      </View>
+      </ScrollView>
 
       {/* Bulk Action Modal */}
       <Modal visible={!!confirmAction} transparent={true} animationType="fade">
@@ -788,22 +787,52 @@ export default function HistoryScreen() {
                     ]} 
                     className="flex-row items-center gap-2 px-3 py-2 rounded-sm active:opacity-50"
                   >
-                    <SymbolView name={{ ios: 'square.and.arrow.up', android: 'ios_share', web: 'ios_share' } as any} tintColor="#3b82f6" size={16} />
-                    <Text style={{ color: '#3b82f6' }} className="text-xs font-bold uppercase tracking-wider">Export</Text>
+                    <SymbolView name={{ ios: 'square.and.arrow.up', android: 'ios_share', web: 'ios_share' } as any} tintColor="#ffffff" size={16} />
+                    <Text style={{ color: '#ffffff' }} className="text-xs font-bold uppercase tracking-wider hidden sm:flex">Export</Text>
                   </Pressable>
                   <Pressable 
                     onPress={() => deleteSingleEntry(selectedEntryToRead)} 
                     style={[
-                      Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }
+                      Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(239, 68, 68, 0.5))' } as any : { shadowColor: '#ef4444', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }
                     ]} 
                     className="flex-row items-center gap-2 px-3 py-2 rounded-sm active:opacity-50"
                   >
-                    <SymbolView name={{ ios: 'trash', android: 'delete', web: 'delete' } as any} tintColor="#3b82f6" size={16} />
-                    <Text style={{ color: '#3b82f6' }} className="text-xs font-bold uppercase tracking-wider">Delete</Text>
+                    <SymbolView name={{ ios: 'trash', android: 'delete', web: 'delete' } as any} tintColor="#ef4444" size={16} />
+                    <Text style={{ color: '#ef4444' }} className="text-xs font-bold uppercase tracking-wider hidden sm:flex">Delete</Text>
                   </Pressable>
+                  <View className="relative">
+                    <Pressable 
+                      onPress={askPrivateLLM} 
+                      {...(Platform.OS === 'web' ? { 
+                        onHoverIn: () => !hasModel && setShowAiTooltip(true),
+                        onHoverOut: () => setShowAiTooltip(false) 
+                      } as any : {})}
+                      style={[
+                        Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
+                        !hasModel && { opacity: 0.5 }
+                      ]} 
+                      className="flex-row items-center gap-2 px-3 py-2 rounded-sm active:opacity-50 ml-2"
+                    >
+                      <SymbolView name={{ ios: 'brain.head.profile', android: 'psychology', web: 'psychology' } as any} tintColor="#3b82f6" size={16} />
+                      <Text style={{ color: '#3b82f6' }} className="text-xs font-bold uppercase tracking-wider hidden sm:flex">Ask Private AI</Text>
+                    </Pressable>
+                    
+                    {Platform.OS === 'web' && showAiTooltip && !hasModel && (
+                      <View 
+                        className="absolute top-full mt-2 right-0 px-3 py-2 rounded-sm shadow-2xl w-64 z-50 border border-gray-700"
+                        style={{ backgroundColor: '#000000', opacity: 1, zIndex: 9999 }}
+                      >
+                        <Text style={{ color: '#ffffff', opacity: 1 }} className="text-xs text-center font-medium">You need to download the private LLM locally first to use this</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
                 <Pressable 
-                  onPress={() => setSelectedEntryToRead(null)} 
+                  onPress={() => {
+                    setSelectedEntryToRead(null);
+                    setShowChat(false);
+                    setChatHistory([]);
+                  }} 
                   style={[
                     Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }
                   ]} 
@@ -813,7 +842,7 @@ export default function HistoryScreen() {
                 </Pressable>
               </View>
               
-              <ScrollView className="flex-1 p-6" showsVerticalScrollIndicator={true}>
+              <ScrollView ref={scrollViewRef} className="flex-1 p-6" showsVerticalScrollIndicator={true}>
                 <View className="flex-row items-center gap-2 mb-6">
                   <View style={[Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.8))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.8, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }]}>
                     <SymbolView 
@@ -829,53 +858,68 @@ export default function HistoryScreen() {
                 <Text className="text-gray-900 dark:text-gray-100 text-lg leading-loose pb-12">
                   {selectedEntryToRead.fullContent || selectedEntryToRead.content}
                 </Text>
+
+                {showChat && (
+                    <View className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800 pb-10">
+                      <View className="flex-row items-center gap-2 mb-6">
+                        <View style={[Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }]}>
+                          <SymbolView name={{ ios: 'brain.head.profile', android: 'psychology', web: 'psychology' } as any} tintColor="#3b82f6" size={20} />
+                        </View>
+                        <Text style={{ textShadowColor: 'rgba(59, 130, 246, 0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }} className="text-blue-500 font-bold uppercase tracking-widest text-xs">Private AI Chat</Text>
+                      </View>
+                      
+                      {chatHistory.map((msg, index) => {
+                        if (msg.role === 'assistant' && !msg.content) return null;
+                        return (
+                          <View key={index} className={`mb-4 max-w-[85%] ${msg.role === 'user' ? 'self-end' : 'self-start'}`}>
+                            <View className={`p-4 rounded-sm ${msg.role === 'user' ? 'bg-blue-500' : 'bg-gray-100 dark:bg-gray-800'}`} style={msg.role === 'user' ? [Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }] : []}>
+                              <Text className={`${msg.role === 'user' ? 'text-white' : 'text-gray-900 dark:text-white'} text-base leading-relaxed`}>
+                                {msg.content}
+                              </Text>
+                            </View>
+                          </View>
+                        );
+                      })}
+                      
+                      {isChatThinking && (
+                        <View className="mb-4 self-start max-w-[85%]">
+                          <View className="p-4 rounded-sm bg-gray-100 dark:bg-gray-800 flex-row items-center gap-3">
+                            <View style={[Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }]}>
+                              <ActivityIndicator size="small" color="#3b82f6" />
+                            </View>
+                            <Text style={{ textShadowColor: 'rgba(59, 130, 246, 0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }} className="text-blue-500 text-sm font-bold uppercase tracking-wider">{chatLoadingText}</Text>
+                          </View>
+                        </View>
+                      )}
+                      
+                      <View className="flex-row mt-4">
+                        <TextInput 
+                          className="flex-1 bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm px-4 py-3 text-gray-900 dark:text-white text-base min-h-[48px]"
+                          placeholder="Ask about this entry..."
+                          placeholderTextColor="#6b7280"
+                          value={chatInput}
+                          onChangeText={setChatInput}
+                          editable={!isChatThinking}
+                          multiline
+                          maxLength={500}
+                        />
+                        <Pressable 
+                          onPress={sendMessageToLLM}
+                          disabled={isChatThinking || !chatInput.trim()}
+                          className={`ml-3 justify-center items-center px-5 rounded-sm ${!chatInput.trim() || isChatThinking ? 'bg-gray-200 dark:bg-gray-800' : 'bg-blue-500 active:bg-blue-600'}`}
+                          style={(!chatInput.trim() || isChatThinking) ? [] : [Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }]}
+                        >
+                          <SymbolView name={{ ios: 'arrow.up', android: 'arrow_upward', web: 'arrow_upward' } as any} tintColor={!chatInput.trim() || isChatThinking ? '#9ca3af' : 'white'} size={20} />
+                        </Pressable>
+                      </View>
+                    </View>
+                )}
               </ScrollView>
             </View>
           </View>
         )}
       </Modal>
-      {/* Deep Analysis Warning Modal */}
-      <Modal visible={showDeepAnalysisWarning} animationType="fade" transparent={true}>
-        <View className="flex-1 bg-black/60 items-center justify-center p-4">
-          <View className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-sm shadow-2xl border border-gray-200 dark:border-gray-800 p-6 overflow-hidden">
-            <View className="items-center mb-6">
-              <View style={[Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 12px rgba(59, 130, 246, 0.8))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.8, shadowRadius: 12, shadowOffset: { width: 0, height: 0 } }]} className="mb-4">
-                <SymbolView name={{ ios: 'brain.head.profile', android: 'psychology', web: 'psychology' } as any} tintColor="#3b82f6" size={48} />
-              </View>
-              <Text style={{ textShadowColor: 'rgba(59, 130, 246, 0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }} className="text-xl font-black text-blue-500 tracking-widest mb-3 uppercase text-center">Private AI</Text>
-              <Text className="text-gray-500 dark:text-gray-400 text-center leading-relaxed font-medium">
-                Deep Analysis runs entirely on this device. Journal content used for analysis is not sent to an AI provider.
-              </Text>
-              <Text className="text-gray-900 dark:text-gray-200 font-bold mt-4 text-center">
-                Requires a one-time ~484 MB download. 
-              </Text>
-              <Text className="text-xs text-gray-500 mt-2 text-center">
-                You are allowed up to 10 successful downloads per month per account.
-              </Text>
-            </View>
-            
-            <View className="flex-row justify-between border-t border-gray-100 dark:border-gray-800 pt-5 mt-2">
-              <Pressable 
-                onPress={() => setShowDeepAnalysisWarning(false)} 
-                className="flex-row items-center justify-center py-2 px-4 active:opacity-50"
-              >
-                <Text className="font-bold text-gray-500 uppercase tracking-wider text-sm">Cancel</Text>
-              </Pressable>
-              
-              <Pressable 
-                onPress={() => {
-                  setShowDeepAnalysisWarning(false);
-                  performDeepAnalysis();
-                }} 
-                style={[Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }]} 
-                className="flex-row items-center justify-center py-2 px-4 active:opacity-50"
-              >
-                <Text style={{ color: '#3b82f6' }} className="font-bold uppercase tracking-wider text-sm">Download</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+
 
     </SafeAreaView>
   );
