@@ -319,8 +319,8 @@ export async function searchEntries(query: string, filterType?: string, filterSt
   // 5. Final Sort by RRF
   rrfScored.sort((a, b) => b.rrfScore - a.rrfScore);
   
-  // Return top 10 and map them so their final index is their final rank
-  return rrfScored.slice(0, 10).map((item, index) => ({
+  // Return top 30 and map them so their final index is their final rank
+  return rrfScored.slice(0, 30).map((item, index) => ({
     ...item,
     finalRank: index + 1
   }));

@@ -35,7 +35,8 @@ export default function AboutScreen() {
         {/* 1. E2EE */}
         <Pressable 
           onPress={() => toggleSection('e2ee')}
-          className="mb-4 bg-white dark:bg-gray-900 rounded-sm p-5 shadow-sm border border-gray-100 dark:border-gray-800"
+          style={Platform.OS === 'web' ? { boxShadow: '0 0 25px rgba(59, 130, 246, 0.6)' } as any : { shadowColor: '#3b82f6', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 20, elevation: 8 }}
+          className="mb-4 bg-transparent rounded-sm p-5 border border-blue-500"
         >
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-4">
@@ -89,7 +90,8 @@ export default function AboutScreen() {
         {/* 2. Voice & Storage */}
         <Pressable 
           onPress={() => toggleSection('voice')}
-          className="mb-4 bg-white dark:bg-gray-900 rounded-sm p-5 shadow-sm border border-gray-100 dark:border-gray-800"
+          style={Platform.OS === 'web' ? { boxShadow: '0 0 25px rgba(59, 130, 246, 0.6)' } as any : { shadowColor: '#3b82f6', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 20, elevation: 8 }}
+          className="mb-4 bg-transparent rounded-sm p-5 border border-blue-500"
         >
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-4">
@@ -137,7 +139,8 @@ export default function AboutScreen() {
         {/* 3. Search */}
         <Pressable 
           onPress={() => toggleSection('rag')}
-          className="mb-12 bg-white dark:bg-gray-900 rounded-sm p-5 shadow-sm border border-gray-100 dark:border-gray-800"
+          style={Platform.OS === 'web' ? { boxShadow: '0 0 25px rgba(59, 130, 246, 0.6)' } as any : { shadowColor: '#3b82f6', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 20, elevation: 8 }}
+          className="mb-12 bg-transparent rounded-sm p-5 border border-blue-500"
         >
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-4">

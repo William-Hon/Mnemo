@@ -68,7 +68,8 @@ export default function SignInScreen() {
       ) : null}
 
       <TextInput
-        className="w-full bg-white dark:bg-gray-900 p-4 rounded-sm border border-gray-200 dark:border-gray-800 mb-4 text-black dark:text-white"
+        className="w-full bg-transparent p-4 rounded-sm border border-gray-200 dark:border-gray-800 mb-4 text-black dark:text-white"
+        style={Platform.OS === 'web' ? { WebkitBoxShadow: '0 0 0 1000px #000 inset', WebkitTextFillColor: '#fff', outlineStyle: 'none' } as any : undefined}
         placeholder="Email"
         placeholderTextColor="#9ca3af"
         autoCapitalize="none"
@@ -81,7 +82,8 @@ export default function SignInScreen() {
         editable={!loading}
       />
       <TextInput
-        className="w-full bg-white dark:bg-gray-900 p-4 rounded-sm border border-gray-200 dark:border-gray-800 mb-8 text-black dark:text-white"
+        className="w-full bg-transparent p-4 rounded-sm border border-gray-200 dark:border-gray-800 mb-8 text-black dark:text-white"
+        style={Platform.OS === 'web' ? { WebkitBoxShadow: '0 0 0 1000px #000 inset', WebkitTextFillColor: '#fff', outlineStyle: 'none' } as any : undefined}
         placeholder="Password"
         placeholderTextColor="#9ca3af"
         secureTextEntry

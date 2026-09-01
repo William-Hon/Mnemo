@@ -6,6 +6,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as Clipboard from 'expo-clipboard';
 import { getUserEntries, searchEntries, deleteEntries, Entry } from '../../src/services/entries';
+import { LocalAIService, AnalysisResult } from '../../src/services/LocalAIService';
 import { useAuth } from '../../src/providers/AuthProvider';
 
 // --- Simple Calendar Component ---
@@ -121,6 +122,11 @@ export default function HistoryScreen() {
   // Single Reading Modal
   const [selectedEntryToRead, setSelectedEntryToRead] = useState<any>(null);
 
+  // Deep Analysis
+  const [deepAnalysisState, setDeepAnalysisState] = useState<'idle' | 'downloading' | 'analyzing' | 'complete' | 'error'>('idle');
+  const [deepAnalysisProgress, setDeepAnalysisProgress] = useState<string>('');
+  const [showDeepAnalysisWarning, setShowDeepAnalysisWarning] = useState(false);
+
   const { user } = useAuth();
 
   const fetchContent = async () => {
@@ -157,9 +163,114 @@ export default function HistoryScreen() {
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       fetchContent();
+      setDeepAnalysisState('idle');
+      setDeepAnalysisProgress('');
     }, 500);
     return () => clearTimeout(delayDebounceFn);
   }, [startDate, endDate, query]);
+
+  const startDeepAnalysis = async () => {
+    try {
+      const isCompatible = await LocalAIService.checkCompatibility();
+      if (!isCompatible) {
+        if (Platform.OS === 'web') {
+          window.alert("Private AI is not supported on this device yet (requires WebGPU on web).");
+        } else {
+          Alert.alert("Not Supported", "Private AI is not supported on this device yet (requires WebGPU on web).");
+        }
+        return;
+      }
+      
+      const isDownloaded = await LocalAIService.isModelDownloaded();
+      if (!isDownloaded) {
+        setShowDeepAnalysisWarning(true);
+        return;
+      }
+      
+      await performDeepAnalysis();
+    } catch (e: any) {
+      setDeepAnalysisState('error');
+      if (Platform.OS === 'web') {
+        window.alert("Deep Analysis Error: " + e.message);
+      } else {
+        Alert.alert("Deep Analysis Error", e.message);
+      }
+    }
+  };
+
+  const performDeepAnalysis = async () => {
+    setDeepAnalysisState('downloading');
+    setDeepAnalysisProgress('');
+    
+    try {
+      if (!LocalAIService.isInitialized) {
+        await LocalAIService.initAndDownload((progressText) => {
+          setDeepAnalysisProgress(progressText);
+        });
+      }
+
+      setDeepAnalysisState('analyzing');
+
+      // Group entries by actual journal ID to avoid evaluating overlapping chunks independently
+      const uniqueJournalsMap = new Map();
+      entries.forEach(e => {
+        const id = e.entry_id || e.id;
+        if (!uniqueJournalsMap.has(id)) {
+          uniqueJournalsMap.set(id, { id, content: e.content, query });
+        } else {
+          uniqueJournalsMap.get(id).content += '\n' + e.content;
+        }
+      });
+      const uniqueJournals = Array.from(uniqueJournalsMap.values());
+
+      setDeepAnalysisProgress(`Analyzing journals 0 / ${uniqueJournals.length}`);
+
+      const batchSize = 5;
+      let allResults: any[] = [];
+      
+      for (let i = 0; i < uniqueJournals.length; i += batchSize) {
+        const batch = uniqueJournals.slice(i, i + batchSize);
+        const results = await LocalAIService.analyzeBatch(batch);
+        allResults = [...allResults, ...results];
+        
+        setDeepAnalysisProgress(`Analyzing journals ${Math.min(i + batchSize, uniqueJournals.length)} / ${uniqueJournals.length}`);
+      }
+      
+      const relevanceMap = { 'DIRECT': 3, 'RELATED': 2, 'WEAK': 1, 'NOT_RELEVANT': 0 };
+
+      const newEntries = [...entries].map(entry => {
+        const id = entry.entry_id || entry.id;
+        const analysis = allResults.find(r => r.entry_id === id);
+        return {
+          ...entry,
+          deepRelevance: analysis ? (relevanceMap[analysis.relevance as keyof typeof relevanceMap] ?? -1) : -1,
+          journalBrief: analysis?.journal_brief,
+          relevantPart: analysis?.relevant_part
+        };
+      });
+
+      newEntries.sort((a, b) => {
+        const rankA = a.deepRelevance ?? -1;
+        const rankB = b.deepRelevance ?? -1;
+        if (rankA !== rankB) return rankB - rankA;
+        return (b.rrfScore || 0) - (a.rrfScore || 0);
+      });
+
+      setEntries(newEntries);
+      setDeepAnalysisState('complete');
+      
+      // Lazily release model from RAM
+      setTimeout(() => LocalAIService.release(), 5000);
+      
+    } catch (e: any) {
+      setDeepAnalysisState('error');
+      if (Platform.OS === 'web') {
+        window.alert("Analysis Error: " + e.message);
+      } else {
+        Alert.alert("Analysis Error", e.message);
+      }
+    }
+  };
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -398,6 +509,38 @@ export default function HistoryScreen() {
         <Text className="text-gray-800 dark:text-gray-200 text-base leading-relaxed" numberOfLines={4}>
           {displayText}
         </Text>
+
+        {item.journalBrief && (
+          <View className="mt-3 bg-gray-50 dark:bg-black/50 p-3 rounded-sm border border-gray-100 dark:border-gray-800 gap-2">
+            <View className="flex-row items-center justify-between mb-1">
+              <View className="flex-row items-center gap-1.5">
+                <SymbolView name={{ ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' } as any} tintColor="#3b82f6" size={14} />
+                <Text className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">Journal Brief</Text>
+              </View>
+              {item.deepRelevance > 0 && (
+                <Text className={`text-[10px] font-black tracking-widest uppercase px-2 py-0.5 rounded-sm ${
+                  item.deepRelevance === 3 ? 'text-green-600 bg-green-100 dark:bg-green-900/30' :
+                  item.deepRelevance === 2 ? 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' :
+                  'text-gray-500 bg-gray-200 dark:bg-gray-800'
+                }`}>
+                  {item.deepRelevance === 3 ? 'DIRECT MATCH' : item.deepRelevance === 2 ? 'RELATED' : 'WEAK'}
+                </Text>
+              )}
+            </View>
+            <Text className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-2">
+              {item.journalBrief}
+            </Text>
+            
+            {item.relevantPart && item.relevantPart !== "null" && (
+              <View className="border-t border-gray-200 dark:border-gray-800 pt-2">
+                <Text className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Relevant Part</Text>
+                <Text className="text-gray-600 dark:text-gray-400 text-sm italic leading-relaxed">
+                  "{item.relevantPart}"
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
       </Pressable>
     );
   };
@@ -544,6 +687,31 @@ export default function HistoryScreen() {
           </View>
         ) : (
           <View className="flex-1 -z-10 relative">
+            {isSearching && entries.length > 0 && (
+              <View className="mb-4 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 rounded-sm">
+                <View className="flex-row items-center justify-between mb-2">
+                  <View className="flex-col flex-1 pr-2">
+                    <Text className="text-gray-900 dark:text-white font-bold tracking-widest uppercase mb-1">Deep Analysis</Text>
+                    <Text className="text-gray-500 text-xs leading-relaxed">Uses private on-device AI to rerank by relevance.</Text>
+                  </View>
+                  <Pressable 
+                    onPress={startDeepAnalysis} 
+                    disabled={deepAnalysisState === 'downloading' || deepAnalysisState === 'analyzing' || deepAnalysisState === 'complete'}
+                    className={`px-4 py-2 rounded-sm ${deepAnalysisState === 'complete' ? 'bg-green-600' : 'bg-blue-500 active:bg-blue-600'}`}
+                  >
+                    <Text className="text-white font-bold text-xs uppercase tracking-wider">
+                      {deepAnalysisState === 'idle' ? 'Analyze' : deepAnalysisState === 'downloading' ? '...' : deepAnalysisState === 'analyzing' ? '...' : 'Done'}
+                    </Text>
+                  </Pressable>
+                </View>
+                {(deepAnalysisState === 'downloading' || deepAnalysisState === 'analyzing') && (
+                  <View className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-800 flex-row items-center justify-between">
+                    <Text className="text-blue-500 text-xs font-bold uppercase">{deepAnalysisProgress}</Text>
+                    <ActivityIndicator size="small" color="#3b82f6" />
+                  </View>
+                )}
+              </View>
+            )}
             <FlatList
               data={entries}
               keyExtractor={(item) => item.id}
@@ -666,6 +834,49 @@ export default function HistoryScreen() {
           </View>
         )}
       </Modal>
+      {/* Deep Analysis Warning Modal */}
+      <Modal visible={showDeepAnalysisWarning} animationType="fade" transparent={true}>
+        <View className="flex-1 bg-black/60 items-center justify-center p-4">
+          <View className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-sm shadow-2xl border border-gray-200 dark:border-gray-800 p-6 overflow-hidden">
+            <View className="items-center mb-6">
+              <View style={[Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 12px rgba(59, 130, 246, 0.8))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.8, shadowRadius: 12, shadowOffset: { width: 0, height: 0 } }]} className="mb-4">
+                <SymbolView name={{ ios: 'brain.head.profile', android: 'psychology', web: 'psychology' } as any} tintColor="#3b82f6" size={48} />
+              </View>
+              <Text style={{ textShadowColor: 'rgba(59, 130, 246, 0.5)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }} className="text-xl font-black text-blue-500 tracking-widest mb-3 uppercase text-center">Private AI</Text>
+              <Text className="text-gray-500 dark:text-gray-400 text-center leading-relaxed font-medium">
+                Deep Analysis runs entirely on this device. Journal content used for analysis is not sent to an AI provider.
+              </Text>
+              <Text className="text-gray-900 dark:text-gray-200 font-bold mt-4 text-center">
+                Requires a one-time ~484 MB download. 
+              </Text>
+              <Text className="text-xs text-gray-500 mt-2 text-center">
+                You are allowed up to 10 successful downloads per month per account.
+              </Text>
+            </View>
+            
+            <View className="flex-row justify-between border-t border-gray-100 dark:border-gray-800 pt-5 mt-2">
+              <Pressable 
+                onPress={() => setShowDeepAnalysisWarning(false)} 
+                className="flex-row items-center justify-center py-2 px-4 active:opacity-50"
+              >
+                <Text className="font-bold text-gray-500 uppercase tracking-wider text-sm">Cancel</Text>
+              </Pressable>
+              
+              <Pressable 
+                onPress={() => {
+                  setShowDeepAnalysisWarning(false);
+                  performDeepAnalysis();
+                }} 
+                style={[Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }]} 
+                className="flex-row items-center justify-center py-2 px-4 active:opacity-50"
+              >
+                <Text style={{ color: '#3b82f6' }} className="font-bold uppercase tracking-wider text-sm">Download</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }

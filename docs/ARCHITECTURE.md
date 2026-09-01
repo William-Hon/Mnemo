@@ -75,3 +75,22 @@ sequenceDiagram
 | Audio Files | Yes | **Yes (Plaintext)** | Yes | No |
 | Text Embeddings | No | Yes | Yes | No |
 | Search Queries | Yes | No | **Yes (Plaintext)** | N/A |
+
+## 11. Local Private AI Model Storage & Inference
+
+Qora features an optional on-device "Deep Analysis" reranker powered by a small local LLM (**Qwen3 0.6B Q4_K_M**). 
+
+### Model Storage & Distribution (Cloudflare R2)
+- **Source**: The raw GGUF model is hosted securely in a **Private Cloudflare R2 Bucket** (`ai-models`) to minimize egress costs.
+- **Session Management**: Users are strictly limited to **10 successful model installations per month** per account.
+- **Download Flow**: 
+  - The client hits the `private-ai-download-url` Edge Function.
+  - The function verifies the monthly limit, creates a `PENDING`/`DOWNLOADING` session, and issues a temporary signed S3/R2 URL.
+  - The client streams the download (to OPFS on Web, or `documentDirectory` on Mobile) and verifies the integrity via SHA-256 and exact byte size.
+  - Only upon successful verification does the client trigger `complete-private-ai-download`, making the session `COMPLETED` and incrementing the monthly limit. Failed/canceled/interrupted downloads do not consume the quota.
+
+### Deep Analysis & Privacy
+- **Execution**: The model is lazily loaded into RAM only when actively needed.
+- **Analysis Pipeline**: The system deduplicates and groups retrieved search chunks by journal, then processes them in small batches through the local Qwen model using a strict instruction prompt. 
+- **Output**: The AI generates a `Journal Brief` (a 1-sentence summary of the entry), a `Relevant Part` ("You talked about..."), and a discrete categorical relevance label (`DIRECT`, `RELATED`, `WEAK`, `NOT_RELEVANT`).
+- **Privacy**: The Private AI inference happens completely offline. Decrypted journal chunks and prompts are never sent to Cloudflare, Supabase, Hugging Face, or any other AI provider. R2 credentials remain exclusively on the backend.

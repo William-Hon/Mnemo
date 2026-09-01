@@ -3,6 +3,7 @@ import { View, Text, Pressable, SafeAreaView, ScrollView, Modal, Platform, Alert
 import { useAuth } from '../../src/providers/AuthProvider';
 import { supabase } from '../../src/lib/supabase';
 import { deleteLocalMEK } from '../../src/lib/encryption';
+import { LocalAIService } from '../../src/services/LocalAIService';
 import { SymbolView } from 'expo-symbols';
 
 import { useRouter } from 'expo-router';
@@ -14,6 +15,56 @@ export default function SettingsScreen() {
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [modelInstalled, setModelInstalled] = useState(false);
+  const [modelActionLoading, setModelActionLoading] = useState(false);
+  const [modelProgress, setModelProgress] = useState('');
+  const [downloadLimit, setDownloadLimit] = useState<{used: number, total: number} | null>(null);
+
+  React.useEffect(() => {
+    checkModelStatus();
+  }, []);
+
+  const checkModelStatus = async () => {
+    const isInstalled = await LocalAIService.isModelDownloaded();
+    setModelInstalled(isInstalled);
+    const limitInfo = await LocalAIService.getDownloadLimitInfo();
+    setDownloadLimit(limitInfo);
+  };
+
+  const handleDownloadModel = async () => {
+    try {
+      setModelActionLoading(true);
+      await LocalAIService.initAndDownload((progress) => {
+        setModelProgress(progress);
+      });
+      await checkModelStatus();
+    } catch (e: any) {
+      if (Platform.OS === 'web') {
+        window.alert(e.message);
+      } else {
+        Alert.alert('Download Error', e.message);
+      }
+    } finally {
+      setModelActionLoading(false);
+      setModelProgress('');
+    }
+  };
+
+  const handleRemoveModel = async () => {
+    try {
+      setModelActionLoading(true);
+      await LocalAIService.removeModel();
+      await checkModelStatus();
+    } catch (e: any) {
+      if (Platform.OS === 'web') {
+        window.alert('Failed to remove model');
+      } else {
+        Alert.alert('Error', 'Failed to remove model');
+      }
+    } finally {
+      setModelActionLoading(false);
+    }
+  };
 
   const performSignOut = async () => {
     try {
@@ -80,6 +131,58 @@ export default function SettingsScreen() {
     <SafeAreaView className="flex-1 bg-gray-50 dark:bg-black">
       <View className="flex-1 p-6 mt-8">
         <View className="bg-white dark:bg-gray-900 rounded-sm p-4 shadow-sm border border-gray-100 dark:border-gray-800 mb-6">
+          <Text className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Private AI</Text>
+          <Text className="text-gray-900 dark:text-gray-100 text-base mb-1">
+            Model: Qwen3 0.6B Q4_K_M
+          </Text>
+          <Text className="text-gray-500 text-sm mb-1">
+            Version: v1
+          </Text>
+          <Text className="text-gray-500 text-sm mb-1">
+            Status: {modelInstalled ? 'Installed (~484 MB)' : 'Not installed'}
+          </Text>
+          {downloadLimit && (
+            <Text className="text-gray-500 text-sm mb-4">
+              Successful downloads this month: {downloadLimit.used} / {downloadLimit.total}
+            </Text>
+          )}
+          
+          {modelActionLoading && (
+            <View className="mb-4 flex-row items-center gap-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-sm">
+              <ActivityIndicator size="small" color="#3b82f6" />
+              <Text className="text-blue-600 dark:text-blue-400 font-bold text-xs flex-1">{modelProgress || 'Loading...'}</Text>
+            </View>
+          )}
+
+          {!modelInstalled ? (
+            <Pressable 
+              onPress={handleDownloadModel}
+              disabled={modelActionLoading}
+              className="bg-blue-500 py-3 rounded-sm items-center active:opacity-50"
+            >
+              <Text className="text-white font-bold tracking-widest uppercase text-xs">Download Model</Text>
+            </Pressable>
+          ) : (
+            <View className="flex-row gap-3">
+              <Pressable 
+                onPress={handleDownloadModel}
+                disabled={modelActionLoading}
+                className="flex-1 bg-gray-100 dark:bg-gray-800 py-3 rounded-sm items-center active:opacity-50"
+              >
+                <Text className="text-gray-700 dark:text-gray-300 font-bold tracking-widest uppercase text-xs">Redownload</Text>
+              </Pressable>
+              <Pressable 
+                onPress={handleRemoveModel}
+                disabled={modelActionLoading}
+                className="flex-1 bg-red-500/10 dark:bg-red-900/20 py-3 rounded-sm items-center active:opacity-50"
+              >
+                <Text className="text-red-500 font-bold tracking-widest uppercase text-xs">Remove</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+
+        <View className="bg-white dark:bg-gray-900 rounded-sm p-4 shadow-sm border border-gray-100 dark:border-gray-800 mb-6">
           <Text className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Account</Text>
           <Text className="text-gray-900 dark:text-gray-100 text-base mb-1">
             Logged in as
@@ -91,9 +194,10 @@ export default function SettingsScreen() {
           <Pressable 
             onPress={handleSignOut}
             disabled={loggingOut || deletingAccount}
-            className="bg-blue-500 active:bg-blue-600 py-3.5 rounded-sm items-center shadow-sm shadow-blue-500/20 mb-4"
+            style={Platform.OS === 'web' ? { boxShadow: '0 0 15px rgba(59, 130, 246, 0.3)' } as any : { shadowColor: '#3b82f6', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 5 }}
+            className="border border-blue-500 py-3.5 rounded-sm items-center mb-4 active:opacity-50"
           >
-            <Text className="text-white font-bold tracking-widest uppercase">{loggingOut ? 'Signing out...' : 'Sign Out'}</Text>
+            <Text style={{ textShadowColor: 'rgba(59, 130, 246, 0.8)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 16 }} className="text-blue-500 font-normal tracking-widest uppercase">{loggingOut ? 'SIGNING OUT...' : 'SIGN OUT'}</Text>
           </Pressable>
 
           <Pressable 

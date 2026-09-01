@@ -6,7 +6,7 @@ export async function encryptText(plaintext: string, mekBase64: string): Promise
   
   const key = await crypto.subtle.importKey(
     'raw',
-    mekBytes,
+    mekBytes as any,
     { name: 'AES-GCM' },
     false,
     ['encrypt']
@@ -38,7 +38,7 @@ export async function decryptText(ciphertextBase64: string, mekBase64: string): 
   
   const key = await crypto.subtle.importKey(
     'raw',
-    mekBytes,
+    mekBytes as any,
     { name: 'AES-GCM' },
     false,
     ['decrypt']
