@@ -133,30 +133,30 @@ export default function RecoveryScreen() {
 
   if (initialLoading) {
     return (
-      <View className="flex-1 justify-center items-center bg-gray-50 dark:bg-black">
+      <View className="flex-1 justify-center items-center bg-black">
         <ActivityIndicator size="large" color="#3b82f6" />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 justify-center px-6 bg-gray-50 dark:bg-black relative">
+    <View className="flex-1 justify-center px-6 bg-black relative">
       <Pressable onPress={handleBack} className="absolute top-12 left-6 active:opacity-50 p-2 z-10">
-        <Text className="text-gray-500 dark:text-gray-500 text-xs font-bold tracking-widest uppercase">← Back</Text>
+        <Text className="text-gray-400 text-xs font-bold tracking-widest uppercase">← Back</Text>
       </Pressable>
 
-      <Text className="text-4xl font-normal mb-10 tracking-widest text-center text-black dark:text-white mt-8">MNEMO</Text>
+      <Text className="text-4xl font-normal mb-10 tracking-widest text-center text-white mt-8">MNEMO</Text>
       
       {hasExistingKey ? (
         <>
-          <Text className="text-xl font-bold mb-4 text-center text-gray-800 dark:text-gray-200 uppercase tracking-widest">Unlock your journal</Text>
-          <Text className="text-gray-500 dark:text-gray-400 mb-8 text-center leading-relaxed font-medium">
+          <Text className="text-xl font-bold mb-4 text-center text-gray-200 uppercase tracking-widest">Unlock your journal</Text>
+          <Text className="text-gray-400 mb-8 text-center leading-relaxed font-medium">
             Enter your encryption passphrase to unlock your journals on this device.
           </Text>
 
           <View className="w-full mb-8 relative justify-center">
             <TextInput
-              className="w-full bg-white dark:bg-gray-900 p-4 pr-12 rounded-sm border border-gray-200 dark:border-gray-800 text-black dark:text-white"
+              className="w-full bg-gray-900 p-4 pr-12 rounded-sm border border-gray-800 text-white"
               style={Platform.OS === 'web' ? { outlineColor: '#3b82f6' } as any : undefined}
               placeholder="Encryption Passphrase"
               placeholderTextColor="#9ca3af"
@@ -186,7 +186,7 @@ export default function RecoveryScreen() {
         </>
       ) : (
         <>
-          <Text className="text-xl font-bold mb-4 text-center text-gray-800 dark:text-gray-200 uppercase tracking-widest">Set Up Encryption</Text>
+          <Text className="text-xl font-bold mb-4 text-center text-gray-200 uppercase tracking-widest">Set Up Encryption</Text>
           <Text 
             style={{ textShadowColor: 'rgba(239, 68, 68, 0.3)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }} 
             className="text-red-500 text-sm leading-relaxed font-normal text-center mb-8 px-2"
@@ -196,7 +196,7 @@ export default function RecoveryScreen() {
 
           <View className="w-full mb-4 relative justify-center">
             <TextInput
-              className="w-full bg-white dark:bg-gray-900 p-4 pr-12 rounded-sm border border-gray-200 dark:border-gray-800 text-black dark:text-white"
+              className="w-full bg-gray-900 p-4 pr-12 rounded-sm border border-gray-800 text-white"
               style={Platform.OS === 'web' ? { outlineColor: '#3b82f6' } as any : undefined}
               placeholder="Passphrase"
               placeholderTextColor="#9ca3af"
@@ -219,7 +219,7 @@ export default function RecoveryScreen() {
 
           <View className="w-full mb-4 relative justify-center">
             <TextInput
-              className="w-full bg-white dark:bg-gray-900 p-4 pr-12 rounded-sm border border-gray-200 dark:border-gray-800 text-black dark:text-white"
+              className="w-full bg-gray-900 p-4 pr-12 rounded-sm border border-gray-800 text-white"
               style={Platform.OS === 'web' ? { outlineColor: '#3b82f6' } as any : undefined}
               placeholder="Confirm passphrase"
               placeholderTextColor="#9ca3af"
@@ -245,10 +245,10 @@ export default function RecoveryScreen() {
             onPress={() => setHasAcknowledged(!hasAcknowledged)}
             disabled={loading}
           >
-            <View className={`w-5 h-5 rounded-sm border mr-3 items-center justify-center ${hasAcknowledged ? 'bg-gray-800 border-gray-800 dark:bg-gray-200 dark:border-gray-200' : 'border-gray-300 dark:border-gray-700 bg-transparent'}`}>
-               {hasAcknowledged && <Text className="text-white dark:text-black text-xs font-bold">✓</Text>}
+            <View className={`w-5 h-5 rounded-sm border mr-3 items-center justify-center ${hasAcknowledged ? 'bg-gray-200 border-gray-200' : 'border-gray-700 bg-transparent'}`}>
+               {hasAcknowledged && <Text className="text-black text-xs font-bold">✓</Text>}
             </View>
-            <Text className="text-gray-700 dark:text-gray-300 text-sm font-medium">I’ve saved my passphrase somewhere secure.</Text>
+            <Text className="text-gray-300 text-sm font-medium">I’ve saved my passphrase somewhere secure.</Text>
           </Pressable>
         </>
       )}

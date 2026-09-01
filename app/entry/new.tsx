@@ -27,28 +27,28 @@ export default function NewEntryScreen() {
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-white dark:bg-black"
+      className="flex-1 bg-black"
     >
-      <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
+      <View className="flex-row items-center justify-between p-4 border-b border-gray-800">
         <Pressable onPress={() => router.back()} className="p-2">
-          <Text className="text-gray-600 dark:text-gray-400 text-lg">Cancel</Text>
+          <Text className="text-gray-400 text-lg">Cancel</Text>
         </Pressable>
         
         <Pressable 
           onPress={handleSave} 
           disabled={isSubmitting || !content.trim()}
-          className={`px-4 py-2 rounded-full ${content.trim() ? 'bg-black dark:bg-white' : 'bg-gray-300 dark:bg-gray-700'}`}
+          className={`px-4 py-2 rounded-full ${content.trim() ? 'bg-blue-500' : 'bg-gray-800'}`}
         >
           {isSubmitting ? (
-            <ActivityIndicator size="small" color={content.trim() ? '#fff' : '#888'} />
+            <ActivityIndicator size="small" color="#ffffff" />
           ) : (
-            <Text className={`font-semibold ${content.trim() ? 'text-white dark:text-black' : 'text-gray-500'}`}>Save</Text>
+            <Text className={`font-semibold ${content.trim() ? 'text-white' : 'text-gray-500'}`}>Save</Text>
           )}
         </Pressable>
       </View>
 
       <TextInput
-        className="flex-1 p-6 text-lg text-black dark:text-white"
+        className="flex-1 p-6 text-lg text-white bg-black"
         placeholder="What's on your mind?"
         placeholderTextColor="#9ca3af"
         multiline

@@ -45,8 +45,8 @@ export default function TabLayout() {
 
   if (!isReady) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000000' }}>
+        <ActivityIndicator size="large" color="#3b82f6" />
       </View>
     );
   }
@@ -59,6 +59,9 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: '#000000',
           borderTopColor: '#333333',
+        },
+        sceneStyle: {
+          backgroundColor: '#000000',
         },
         headerShown: false,
       }}>

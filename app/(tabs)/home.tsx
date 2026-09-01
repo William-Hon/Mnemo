@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, useColorScheme } from 'react-native';
+import { View, Text, Pressable, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, cancelAnimation, Easing } from 'react-native-reanimated';
 import { useAuth } from '../../src/providers/AuthProvider';
@@ -170,11 +170,8 @@ export default function HomeScreen() {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#000' : '#fff' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#000000' }}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
         style={{ flex: 1 }}
@@ -182,13 +179,13 @@ export default function HomeScreen() {
         <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, paddingTop: (state === 'typing' || state === 'reviewing') ? 48 : 24 }}>
           {(state === 'idle' || state === 'recording') && (
             <View style={{ marginBottom: 48, alignItems: 'center', width: '100%' }}>
-              <Text style={{ fontSize: 24, fontWeight: 'bold', color: isDark ? '#fff' : '#000', letterSpacing: 1, marginBottom: 8, textAlign: 'center' }}>
+              <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#ffffff', letterSpacing: 1, marginBottom: 8, textAlign: 'center' }}>
                 MNEMO
               </Text>
-              <Text style={{ fontSize: 18, color: isDark ? '#d1d5db' : '#4b5563', fontStyle: 'italic', marginBottom: 12, textAlign: 'center' }}>
+              <Text style={{ fontSize: 18, color: '#d1d5db', fontStyle: 'italic', marginBottom: 12, textAlign: 'center' }}>
                 /E^niE?.moES/
               </Text>
-              <Text style={{ fontSize: 16, color: isDark ? '#fff' : '#000', lineHeight: 24, textAlign: 'center' }}>
+              <Text style={{ fontSize: 16, color: '#ffffff', lineHeight: 24, textAlign: 'center' }}>
                 <Text style={{ fontStyle: 'italic' }}>n.</Text> memory; remembrance; a record of what should not be forgotten.
               </Text>
             </View>
@@ -196,7 +193,7 @@ export default function HomeScreen() {
           
           {/* Timer (Only visible when recording) */}
           {state === 'recording' && (
-            <Text style={{ fontSize: 24, fontWeight: '300', color: isDark ? '#fff' : '#000', marginBottom: 32, fontFamily: 'monospace' }}>
+            <Text style={{ fontSize: 24, fontWeight: '300', color: '#ffffff', marginBottom: 32, fontFamily: 'monospace' }}>
               {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
             </Text>
           )}
@@ -219,7 +216,7 @@ export default function HomeScreen() {
                     justifyContent: 'center', 
                     backgroundColor: 'transparent', 
                     borderWidth: state === 'idle' ? 4 : 2, 
-                    borderColor: state === 'idle' ? '#3b82f6' : (isDark ? '#fff' : '#000'),
+                    borderColor: state === 'idle' ? '#3b82f6' : '#ffffff',
                     shadowColor: state === 'idle' ? '#3b82f6' : 'transparent',
                     shadowOpacity: state === 'idle' ? 0.6 : 0,
                     shadowRadius: 15,
@@ -227,7 +224,7 @@ export default function HomeScreen() {
                     ...(Platform.OS === 'web' && state === 'idle' ? { filter: 'drop-shadow(0px 0px 10px rgba(59, 130, 246, 0.8))' } as any : {})
                   }
                 ]}>
-                  <Text style={{ color: state === 'idle' ? '#3b82f6' : (isDark ? '#fff' : '#000'), fontSize: state === 'reviewing' ? 14 : 18, letterSpacing: 2, fontFamily: 'monospace', textTransform: 'uppercase', fontWeight: state === 'idle' ? 'bold' : 'normal' }}>
+                  <Text style={{ color: state === 'idle' ? '#3b82f6' : '#ffffff', fontSize: state === 'reviewing' ? 14 : 18, letterSpacing: 2, fontFamily: 'monospace', textTransform: 'uppercase', fontWeight: state === 'idle' ? 'bold' : 'normal' }}>
                     {state === 'idle' ? 'Speak' : 'Reset'}
                   </Text>
                 </Animated.View>
@@ -248,9 +245,9 @@ export default function HomeScreen() {
                 </Animated.View>
               </Pressable>
             ) : (
-              <View style={{ width: 192, height: 192, borderRadius: 96, alignItems: 'center', justifyContent: 'center', marginBottom: 32, borderWidth: 2, borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)', backgroundColor: 'transparent' }}>
-                <ActivityIndicator size="large" color={isDark ? "#ffffff" : "#000000"} />
-                <Text style={{ color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)', marginTop: 16, fontFamily: 'monospace', letterSpacing: 2, fontSize: 12, textTransform: 'uppercase' }}>Transcribing</Text>
+              <View style={{ width: 192, height: 192, borderRadius: 96, alignItems: 'center', justifyContent: 'center', marginBottom: 32, borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)', backgroundColor: 'transparent' }}>
+                <ActivityIndicator size="large" color="#ffffff" />
+                <Text style={{ color: 'rgba(255,255,255,0.5)', marginTop: 16, fontFamily: 'monospace', letterSpacing: 2, fontSize: 12, textTransform: 'uppercase' }}>Transcribing</Text>
               </View>
             )
           )}
@@ -258,25 +255,25 @@ export default function HomeScreen() {
           {/* Text Box / Save Button (Visible in Reviewing OR Typing state) */}
           {(state === 'reviewing' || state === 'typing') && (
             <View style={{ width: '100%', flex: 1, marginTop: 16, paddingBottom: 32 }}>
-               <Text style={{ color: isDark ? '#9ca3af' : '#6b7280', marginBottom: 12, fontFamily: 'monospace', textAlign: 'center', letterSpacing: 2, fontSize: 12, textTransform: 'uppercase' }}>
+               <Text style={{ color: '#9ca3af', marginBottom: 12, fontFamily: 'monospace', textAlign: 'center', letterSpacing: 2, fontSize: 12, textTransform: 'uppercase' }}>
                  {state === 'typing' ? 'Write Entry' : 'Review Transcription'}
                </Text>
                <TextInput
-                  style={{ width: '100%', flex: 1, minHeight: 160, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', borderRadius: 4, padding: 16, fontSize: 18, color: isDark ? '#fff' : '#000', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb' }}
+                  style={{ width: '100%', flex: 1, minHeight: 160, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 4, padding: 16, fontSize: 18, color: '#ffffff', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
                   multiline
                   textAlignVertical="top"
                   value={transcribedText}
                   onChangeText={setTranscribedText}
                   placeholder={state === 'typing' ? "Type your thoughts..." : ""}
-                  placeholderTextColor={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'}
+                  placeholderTextColor="rgba(255,255,255,0.3)"
                   autoFocus={state === 'typing'}
                />
                <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
                  <Pressable onPress={handleCancel} style={{ flex: 1, backgroundColor: '#ef4444', padding: 16, borderRadius: 4, alignItems: 'center' }} className="active:opacity-80">
                    <Text style={{ color: '#fff', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Cancel</Text>
                  </Pressable>
-                 <Pressable onPress={handleSave} style={{ flex: 4, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', borderWidth: 1, borderColor: isDark ? '#fff' : '#000', padding: 16, borderRadius: 4, alignItems: 'center' }} className="active:opacity-80">
-                   <Text style={{ color: isDark ? '#fff' : '#000', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Save Entry</Text>
+                 <Pressable onPress={handleSave} style={{ flex: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: '#ffffff', padding: 16, borderRadius: 4, alignItems: 'center' }} className="active:opacity-80">
+                   <Text style={{ color: '#ffffff', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase' }}>Save Entry</Text>
                  </Pressable>
                </View>
             </View>
@@ -285,7 +282,7 @@ export default function HomeScreen() {
           {/* Type Instead Link (Only visible when idle) */}
           {state === 'idle' && (
             <Pressable style={{ padding: 16 }} className="active:opacity-50" onPress={() => setState('typing')}>
-              <Text style={{ color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)', fontSize: 12, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: 2 }}>Type instead</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: 2 }}>Type instead</Text>
             </Pressable>
           )}
         </ScrollView>

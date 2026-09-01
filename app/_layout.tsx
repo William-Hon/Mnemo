@@ -2,6 +2,7 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments, ThemeProvider, DarkTheme } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import '../global.css';
 import 'react-native-reanimated';
 
@@ -42,6 +43,13 @@ export default function RootLayout() {
   useEffect(() => {
     if (error) throw error;
   }, [error]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      document.documentElement.classList.add('dark');
+      document.body.style.backgroundColor = '#000000';
+    }
+  }, []);
 
   useEffect(() => {
     if (loaded) {
