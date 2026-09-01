@@ -2,7 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Sleek Minimal Scrollbars for Web */
+/* Root level web dark resets */
+html, body, #root {
+  background-color: #000000 !important;
+  color: #ffffff;
+  min-height: 100%;
+}
+
+/* Sleek Minimal Dark Scrollbars for Web */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -13,22 +20,11 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1; /* slate-300 for light mode */
+  background-color: #334155;
   border-radius: 10px;
 }
 
-@media (prefers-color-scheme: dark) {
-  ::-webkit-scrollbar-thumb {
-    background-color: #334155; /* slate-700 for dark mode */
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background-color: #475569; /* slate-600 */
-  }
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background-color: #334155;
-}
-.dark ::-webkit-scrollbar-thumb:hover {
+::-webkit-scrollbar-thumb:hover {
   background-color: #475569;
 }
+

@@ -55,11 +55,11 @@ const SimpleCalendar = ({
   return (
     <View className="mb-2 w-full">
       <View className="flex-row justify-between items-center mb-2 px-1">
-        <Pressable onPress={prevMonth} className="p-1"><Text className="dark:text-white font-bold">&lt;</Text></Pressable>
-        <Text className="dark:text-white font-bold text-xs uppercase tracking-widest">
+        <Pressable onPress={prevMonth} className="p-1"><Text className="text-white font-bold">&lt;</Text></Pressable>
+        <Text className="text-white font-bold text-xs uppercase tracking-widest">
           {baseDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
         </Text>
-        <Pressable onPress={nextMonth} className="p-1"><Text className="dark:text-white font-bold">&gt;</Text></Pressable>
+        <Pressable onPress={nextMonth} className="p-1"><Text className="text-white font-bold">&gt;</Text></Pressable>
       </View>
       <View className="flex-row flex-wrap">
         {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
@@ -75,14 +75,14 @@ const SimpleCalendar = ({
           const isBetween = tempStart && tempEnd && new Date(currentStr) > new Date(tempStart) && new Date(currentStr) < new Date(tempEnd);
           
           let bgClass = "bg-transparent";
-          let textClass = "text-gray-900 dark:text-gray-300";
+          let textClass = "text-gray-300";
           
           if (isStart || isEnd) {
             bgClass = "bg-blue-500 rounded-sm";
             textClass = "text-white font-bold";
           } else if (isBetween) {
             bgClass = "bg-blue-500/20";
-            textClass = "text-blue-600 dark:text-blue-400";
+            textClass = "text-blue-400";
           }
 
           return (
@@ -498,15 +498,15 @@ export default function HistoryScreen() {
       <Pressable
         onPress={() => setSelectedEntryToRead(item)}
         onLongPress={() => toggleBulkSelection(actualId)}
-        className={`bg-white dark:bg-gray-900 p-4 rounded-sm shadow-sm border mb-4 ${
-          isSelected ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : 'border-gray-100 dark:border-gray-800'
+        className={`bg-gray-900 p-4 rounded-sm shadow-sm border mb-4 ${
+          isSelected ? 'border-blue-500 bg-blue-900/20' : 'border-gray-800'
         }`}
       >
         <View className="flex-row justify-between items-start mb-3">
           <View className="flex-row items-center gap-2 flex-wrap flex-1 pr-2">
             {isSearchResult && (
-              <View className="bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded mr-1">
-                <Text className="text-blue-600 dark:text-blue-400 font-bold text-xs">
+              <View className="bg-blue-900/30 px-2 py-0.5 rounded mr-1">
+                <Text className="text-blue-400 font-bold text-xs">
                   #{item.finalRank} most relevant
                 </Text>
               </View>
@@ -517,7 +517,7 @@ export default function HistoryScreen() {
                 tintColor="#9ca3af" 
                 size={16} 
               />
-              <Text className="text-gray-400 dark:text-gray-500 font-medium text-xs">
+              <Text className="text-gray-400 font-medium text-xs">
                 {new Date(item.created_at).toLocaleDateString()}
               </Text>
             </View>
@@ -532,35 +532,35 @@ export default function HistoryScreen() {
           </Pressable>
         </View>
         
-        <Text className="text-gray-800 dark:text-gray-200 text-base leading-relaxed" numberOfLines={4}>
+        <Text className="text-gray-200 text-base leading-relaxed" numberOfLines={4}>
           {displayText}
         </Text>
 
         {item.journalBrief && (
-          <View className="mt-3 bg-gray-50 dark:bg-black/50 p-3 rounded-sm border border-gray-100 dark:border-gray-800 gap-2">
+          <View className="mt-3 bg-black/50 p-3 rounded-sm border border-gray-800 gap-2">
             <View className="flex-row items-center justify-between mb-1">
               <View className="flex-row items-center gap-1.5">
                 <SymbolView name={{ ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' } as any} tintColor="#3b82f6" size={14} />
-                <Text className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">Journal Brief</Text>
+                <Text className="text-xs font-bold text-gray-100 uppercase tracking-wider">Journal Brief</Text>
               </View>
               {item.deepRelevance > 0 && (
                 <Text className={`text-[10px] font-black tracking-widest uppercase px-2 py-0.5 rounded-sm ${
-                  item.deepRelevance === 3 ? 'text-green-600 bg-green-100 dark:bg-green-900/30' :
-                  item.deepRelevance === 2 ? 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' :
-                  'text-gray-500 bg-gray-200 dark:bg-gray-800'
+                  item.deepRelevance === 3 ? 'text-green-400 bg-green-900/30' :
+                  item.deepRelevance === 2 ? 'text-blue-400 bg-blue-900/30' :
+                  'text-gray-400 bg-gray-800'
                 }`}>
                   {item.deepRelevance === 3 ? 'DIRECT MATCH' : item.deepRelevance === 2 ? 'RELATED' : 'WEAK'}
                 </Text>
               )}
             </View>
-            <Text className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-2">
+            <Text className="text-gray-400 text-sm leading-relaxed mb-2">
               {item.journalBrief}
             </Text>
             
             {item.relevantPart && item.relevantPart !== "null" && (
-              <View className="border-t border-gray-200 dark:border-gray-800 pt-2">
+              <View className="border-t border-gray-800 pt-2">
                 <Text className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Relevant Part</Text>
-                <Text className="text-gray-600 dark:text-gray-400 text-sm italic leading-relaxed">
+                <Text className="text-gray-400 text-sm italic leading-relaxed">
                   "{item.relevantPart}"
                 </Text>
               </View>
@@ -573,7 +573,7 @@ export default function HistoryScreen() {
 
   return (
     <SafeAreaView 
-      className="flex-1 bg-gray-50 dark:bg-black"
+      className="flex-1 bg-black"
       style={Platform.OS === 'web' ? { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } as any : {}}
     >
       <ScrollView 
@@ -589,7 +589,7 @@ export default function HistoryScreen() {
         {/* Top Header / Action Bar */}
         {selectedIds.size > 0 ? (
           <View className="flex-row items-center justify-between bg-transparent p-3 mb-4 mt-8">
-            <Text className="text-gray-900 dark:text-gray-100 font-bold text-lg tracking-wider">
+            <Text className="text-gray-100 font-bold text-lg tracking-wider">
               {selectedIds.size} SELECTED
             </Text>
             <View className="flex-row gap-4">
@@ -598,14 +598,14 @@ export default function HistoryScreen() {
                 className="flex-row items-center gap-2 active:opacity-50"
               >
                 <SymbolView name={{ ios: 'xmark', android: 'close', web: 'close' } as any} tintColor="#6b7280" size={16} />
-                <Text className="text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-wider hidden sm:flex">Deselect All</Text>
+                <Text className="text-gray-400 text-xs font-bold uppercase tracking-wider hidden sm:flex">Deselect All</Text>
               </Pressable>
               <Pressable 
                 onPress={confirmBulkExport} 
                 className="flex-row items-center gap-2 active:opacity-50"
               >
                 <SymbolView name={{ ios: 'square.and.arrow.up', android: 'share', web: 'share' } as any} tintColor="#6b7280" size={16} />
-                <Text className="text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-wider hidden sm:flex">Export All</Text>
+                <Text className="text-gray-400 text-xs font-bold uppercase tracking-wider hidden sm:flex">Export All</Text>
               </Pressable>
               <Pressable 
                 onPress={confirmBulkDelete} 
@@ -618,16 +618,16 @@ export default function HistoryScreen() {
           </View>
         ) : (
           <View className="flex-row justify-between items-center mb-6 mt-8">
-            <Text className="text-gray-900 dark:text-white font-bold text-2xl tracking-tight">Journals</Text>
+            <Text className="text-white font-bold text-2xl tracking-tight">Journals</Text>
           </View>
         )}
 
         {/* Search and Filters */}
         <View style={{ flexDirection: isMobile ? 'column' : 'row', width: '100%' }} className="gap-3 mb-6 relative z-50">
-          <View style={{ flex: isMobile ? undefined : 1, width: '100%' }} className="flex-row items-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-sm px-4 h-12 shadow-sm">
+          <View style={{ flex: isMobile ? undefined : 1, width: '100%' }} className="flex-row items-center bg-gray-900 border border-gray-800 rounded-sm px-4 h-12 shadow-sm">
             <SymbolView name={{ ios: 'magnifyingglass', android: 'search', web: 'search' } as any} tintColor="#9ca3af" size={20} />
             <TextInput
-              className="flex-1 ml-3 text-gray-900 dark:text-white text-base h-full outline-none"
+              className="flex-1 ml-3 text-white text-base h-full outline-none"
               placeholder="Search journals"
               placeholderTextColor="#9ca3af"
               value={query}
@@ -646,12 +646,12 @@ export default function HistoryScreen() {
               <Pressable 
                 onPress={() => setShowDatePicker(!showDatePicker)}
                 style={{ flex: isMobile ? 1 : undefined, width: '100%' }}
-                className={`flex-row items-center justify-center bg-white dark:bg-gray-900 border px-2 sm:px-4 h-12 rounded-sm shadow-sm ${
-                  startDate || endDate ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-800'
+                className={`flex-row items-center justify-center bg-gray-900 border px-2 sm:px-4 h-12 rounded-sm shadow-sm ${
+                  startDate || endDate ? 'border-blue-500 bg-blue-900/20' : 'border-gray-800'
                 }`}
               >
                 <SymbolView name={{ ios: 'calendar', android: 'calendar_today', web: 'calendar_today' } as any} tintColor={startDate || endDate ? '#3b82f6' : '#9ca3af'} size={18} />
-                <Text className={`ml-2 text-xs sm:text-sm font-bold ${startDate || endDate ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                <Text className={`ml-2 text-xs sm:text-sm font-bold ${startDate || endDate ? 'text-blue-400' : 'text-gray-400'}`}>
                   Date Range
                 </Text>
               </Pressable>
@@ -663,7 +663,7 @@ export default function HistoryScreen() {
                     transform: [{ scale: calendarScale }], 
                     transformOrigin: 'top left' 
                   } as any}
-                  className="absolute top-10 left-0 w-[280px] max-w-[90vw] bg-white dark:bg-gray-900 rounded-sm shadow-xl border border-gray-200 dark:border-gray-800 p-3 z-50"
+                  className="absolute top-10 left-0 w-[280px] max-w-[90vw] bg-gray-900 rounded-sm shadow-xl border border-gray-800 p-3 z-50"
                 >
                   <SimpleCalendar tempStart={tempStart} setTempStart={setTempStart} tempEnd={tempEnd} setTempEnd={setTempEnd} />
                   
@@ -673,20 +673,20 @@ export default function HistoryScreen() {
                       onChangeText={setTempStart} 
                       placeholder="Start Date (YYYY-MM-DD)" 
                       placeholderTextColor="#9ca3af" 
-                      className="w-full bg-gray-100 dark:bg-gray-800 p-2 text-xs rounded-sm dark:text-white" 
+                      className="w-full bg-gray-800 p-2 text-xs rounded-sm text-white" 
                     />
                     <TextInput 
                       value={tempEnd} 
                       onChangeText={setTempEnd} 
                       placeholder="End Date (YYYY-MM-DD)" 
                       placeholderTextColor="#9ca3af" 
-                      className="w-full bg-gray-100 dark:bg-gray-800 p-2 text-xs rounded-sm dark:text-white" 
+                      className="w-full bg-gray-800 p-2 text-xs rounded-sm text-white" 
                     />
                   </View>
 
-                  <View className="flex-row justify-between border-t border-gray-100 dark:border-gray-800 pt-3 mt-1">
-                    <Pressable onPress={clearDateFilter} className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-sm">
-                      <Text className="text-gray-600 dark:text-gray-300 text-xs font-bold">Clear</Text>
+                  <View className="flex-row justify-between border-t border-gray-800 pt-3 mt-1">
+                    <Pressable onPress={clearDateFilter} className="px-3 py-1.5 bg-gray-800 rounded-sm">
+                      <Text className="text-gray-300 text-xs font-bold">Clear</Text>
                     </Pressable>
                     <View className="flex-row gap-2">
                       <Pressable onPress={() => setShowDatePicker(false)} className="px-3 py-1.5 rounded-sm">
@@ -710,8 +710,8 @@ export default function HistoryScreen() {
                 }
               }}
               style={{ flex: isMobile ? 1 : undefined }}
-              className={`flex-row items-center justify-center bg-white dark:bg-gray-900 border px-2 sm:px-4 h-12 rounded-sm shadow-sm ${
-                selectedIds.size > 0 ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-800'
+              className={`flex-row items-center justify-center bg-gray-900 border px-2 sm:px-4 h-12 rounded-sm shadow-sm ${
+                selectedIds.size > 0 ? 'border-blue-500 bg-blue-900/20' : 'border-gray-800'
               }`}
             >
               <SymbolView 
@@ -723,7 +723,7 @@ export default function HistoryScreen() {
                 tintColor={selectedIds.size > 0 ? '#3b82f6' : '#9ca3af'} 
                 size={18} 
               />
-              <Text className={`ml-2 text-xs sm:text-sm font-bold ${selectedIds.size > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`}>
+              <Text className={`ml-2 text-xs sm:text-sm font-bold ${selectedIds.size > 0 ? 'text-blue-400' : 'text-gray-400'}`}>
                 {selectedIds.size > 0 ? 'Deselect All' : 'Select All'}
               </Text>
             </Pressable>
@@ -733,11 +733,11 @@ export default function HistoryScreen() {
         {/* Content Area */}
         {loading && !refreshing && entries.length === 0 ? (
           <View className="items-center justify-center mt-20">
-            <ActivityIndicator size="large" />
+            <ActivityIndicator size="large" color="#3b82f6" />
           </View>
         ) : entries.length === 0 ? (
           <View className="items-center justify-center mt-20">
-            <Text className="text-gray-500 dark:text-gray-400">
+            <Text className="text-gray-400">
               {isSearching ? "No matching entries found." : "Your journal is empty."}
             </Text>
           </View>
@@ -749,8 +749,8 @@ export default function HistoryScreen() {
               </React.Fragment>
             ))}
             {loading && !refreshing && (
-              <View className="absolute inset-0 bg-white/50 dark:bg-black/50 items-center justify-center z-50">
-                <ActivityIndicator size="large" />
+              <View className="absolute inset-0 bg-black/50 items-center justify-center z-50">
+                <ActivityIndicator size="large" color="#3b82f6" />
               </View>
             )}
           </View>
@@ -760,11 +760,11 @@ export default function HistoryScreen() {
       {/* Bulk Action Modal */}
       <Modal visible={!!confirmAction} transparent={true} animationType="fade">
         <View className="flex-1 bg-black/60 items-center justify-center p-4">
-          <View className="bg-white dark:bg-gray-900 w-full max-w-sm rounded-sm p-6 shadow-xl">
-            <Text className="text-xl font-bold text-gray-900 dark:text-white mb-2 text-center">
+          <View className="bg-gray-900 w-full max-w-sm rounded-sm p-6 shadow-xl border border-gray-800">
+            <Text className="text-xl font-bold text-white mb-2 text-center">
               {confirmAction === 'delete' ? 'Delete Entries' : 'Export Entries'}
             </Text>
-            <Text className="text-gray-500 dark:text-gray-400 mb-6 text-center leading-relaxed">
+            <Text className="text-gray-400 mb-6 text-center leading-relaxed">
               {confirmAction === 'delete' 
                 ? `Are you sure you want to permanently delete ${selectedIds.size} ${selectedIds.size === 1 ? 'entry' : 'entries'}? This action cannot be undone.`
                 : `How would you like to export your ${selectedIds.size} selected ${selectedIds.size === 1 ? 'entry' : 'entries'}?`
@@ -773,8 +773,8 @@ export default function HistoryScreen() {
             
             {confirmAction === 'delete' ? (
               <View className="flex-row gap-3">
-                <Pressable onPress={() => setConfirmAction(null)} className="flex-1 bg-gray-100 dark:bg-gray-800 py-3 rounded-sm active:bg-gray-200 dark:active:bg-gray-700">
-                  <Text className="text-center font-bold text-gray-700 dark:text-gray-300">Cancel</Text>
+                <Pressable onPress={() => setConfirmAction(null)} className="flex-1 bg-gray-800 py-3 rounded-sm active:bg-gray-700">
+                  <Text className="text-center font-bold text-gray-300">Cancel</Text>
                 </Pressable>
                 
                 <Pressable onPress={executeBulkAction} className="flex-1 bg-red-500 py-3 rounded-sm active:bg-red-600 shadow-sm shadow-red-500/20">
@@ -787,12 +787,12 @@ export default function HistoryScreen() {
                   <Text className="text-center font-bold text-white">Generate PDF Document</Text>
                 </Pressable>
 
-                <Pressable onPress={executeBulkExportClipboard} className="w-full bg-gray-800 dark:bg-gray-700 py-3.5 rounded-sm active:bg-gray-900">
+                <Pressable onPress={executeBulkExportClipboard} className="w-full bg-gray-800 py-3.5 rounded-sm active:bg-gray-700">
                   <Text className="text-center font-bold text-white">Copy Text to Clipboard</Text>
                 </Pressable>
 
-                <Pressable onPress={() => setConfirmAction(null)} className="w-full bg-gray-100 dark:bg-gray-800 py-3.5 mt-2 rounded-sm active:bg-gray-200 dark:active:bg-gray-700">
-                  <Text className="text-center font-bold text-gray-700 dark:text-gray-300">Cancel</Text>
+                <Pressable onPress={() => setConfirmAction(null)} className="w-full bg-gray-800 py-3.5 mt-2 rounded-sm active:bg-gray-700">
+                  <Text className="text-center font-bold text-gray-300">Cancel</Text>
                 </Pressable>
               </View>
             )}
@@ -803,8 +803,8 @@ export default function HistoryScreen() {
       {/* Single Entry Reading Modal */}
       <ResponsiveModal visible={!!selectedEntryToRead}>
         {selectedEntryToRead && (
-            <View className="w-full max-w-2xl flex-1 max-h-[90%] sm:max-h-[85%] bg-white dark:bg-gray-900 rounded-sm shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-              <View className="flex-row justify-between items-center p-5 border-b border-gray-100 dark:border-gray-800">
+            <View className="w-full max-w-2xl flex-1 max-h-[90%] sm:max-h-[85%] bg-gray-900 rounded-sm shadow-2xl border border-gray-800 overflow-hidden">
+              <View className="flex-row justify-between items-center p-5 border-b border-gray-800">
                 <View className="flex-row gap-3">
                   <Pressable 
                     onPress={() => generateExport([selectedEntryToRead])} 
@@ -877,16 +877,16 @@ export default function HistoryScreen() {
                       size={20} 
                     />
                   </View>
-                  <Text className="text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider text-xs">
+                  <Text className="text-gray-400 font-bold uppercase tracking-wider text-xs">
                     {new Date(selectedEntryToRead.created_at).toLocaleDateString()} at {new Date(selectedEntryToRead.created_at).toLocaleTimeString()}
                   </Text>
                 </View>
-                <Text className="text-gray-900 dark:text-gray-100 text-lg leading-loose pb-12">
+                <Text className="text-gray-100 text-lg leading-loose pb-12">
                   {selectedEntryToRead.fullContent || selectedEntryToRead.content}
                 </Text>
 
                 {showChat && (
-                    <View className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800 pb-4">
+                    <View className="mt-8 pt-6 border-t border-gray-800 pb-4">
                       <View className="flex-row items-center gap-2 mb-6">
                         <View style={[Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }]}>
                           <SymbolView name={{ ios: 'brain.head.profile', android: 'psychology', web: 'psychology' } as any} tintColor="#3b82f6" size={20} />
@@ -898,8 +898,8 @@ export default function HistoryScreen() {
                         if (msg.role === 'assistant' && !msg.content) return null;
                         return (
                           <View key={index} className={`mb-4 max-w-[85%] ${msg.role === 'user' ? 'self-end' : 'self-start'}`}>
-                            <View className={`p-4 rounded-sm ${msg.role === 'user' ? 'bg-blue-500' : 'bg-gray-100 dark:bg-gray-800'}`} style={msg.role === 'user' ? [Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }] : []}>
-                              <Text className={`${msg.role === 'user' ? 'text-white' : 'text-gray-900 dark:text-white'} text-base leading-relaxed`}>
+                            <View className={`p-4 rounded-sm ${msg.role === 'user' ? 'bg-blue-500' : 'bg-gray-800'}`} style={msg.role === 'user' ? [Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }] : []}>
+                              <Text className={`${msg.role === 'user' ? 'text-white' : 'text-white'} text-base leading-relaxed`}>
                                 {msg.content}
                               </Text>
                             </View>
@@ -909,7 +909,7 @@ export default function HistoryScreen() {
                       
                       {isChatThinking && (
                         <View className="mb-4 self-start max-w-[85%]">
-                          <View className="p-4 rounded-sm bg-gray-100 dark:bg-gray-800 flex-row items-center gap-3">
+                          <View className="p-4 rounded-sm bg-gray-800 flex-row items-center gap-3">
                             <View style={[Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }]}>
                               <ActivityIndicator size="small" color="#3b82f6" />
                             </View>
@@ -922,10 +922,10 @@ export default function HistoryScreen() {
               </ScrollView>
               
               {showChat && (
-                <View className="p-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 z-50">
+                <View className="p-4 border-t border-gray-800 bg-gray-900 z-50">
                   <View className="flex-row">
                     <TextInput 
-                      className="flex-1 bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm px-4 py-3 text-gray-900 dark:text-white text-base min-h-[48px]"
+                      className="flex-1 bg-black border border-gray-800 rounded-sm px-4 py-3 text-white text-base min-h-[48px]"
                       placeholder="Ask about this entry..."
                       placeholderTextColor="#6b7280"
                       value={chatInput}
@@ -937,7 +937,7 @@ export default function HistoryScreen() {
                     <Pressable 
                       onPress={sendMessageToLLM}
                       disabled={isChatThinking || !chatInput.trim()}
-                      className={`ml-3 justify-center items-center px-5 rounded-sm ${!chatInput.trim() || isChatThinking ? 'bg-gray-200 dark:bg-gray-800' : 'bg-blue-500 active:bg-blue-600'}`}
+                      className={`ml-3 justify-center items-center px-5 rounded-sm ${!chatInput.trim() || isChatThinking ? 'bg-gray-800' : 'bg-blue-500 active:bg-blue-600'}`}
                       style={(!chatInput.trim() || isChatThinking) ? [] : [Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }]}
                     >
                       <SymbolView name={{ ios: 'arrow.up', android: 'arrow_upward', web: 'arrow_upward' } as any} tintColor={!chatInput.trim() || isChatThinking ? '#9ca3af' : 'white'} size={20} />

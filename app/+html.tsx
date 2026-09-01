@@ -12,6 +12,7 @@ export default function Root({ children }: { children: ReactNode }) {
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+        <meta name="theme-color" content="#000000" />
         <title>MNEMO</title>
 
         {/*
@@ -20,21 +21,20 @@ export default function Root({ children }: { children: ReactNode }) {
         */}
         <ScrollViewStyleReset />
 
-        {/* Using raw CSS styles as an escape-hatch to ensure the background color never flickers in dark-mode. */}
-        <style dangerouslySetInnerHTML={{ __html: responsiveBackground }} />
+        {/* Raw CSS ensuring permanent dark background across web canvas, preventing light flashes and white overscroll */}
+        <style dangerouslySetInnerHTML={{ __html: permanentDarkStyles }} />
         {/* Add any additional <head> elements that you want globally available on web... */}
       </head>
-      <body>{children}</body>
+      <body style={{ backgroundColor: '#000000', color: '#ffffff' }}>{children}</body>
     </html>
   );
 }
 
-const responsiveBackground = `
-body {
-  background-color: #fff;
+const permanentDarkStyles = `
+html, body, #root {
+  background-color: #000000 !important;
+  color: #ffffff;
+  min-height: 100%;
+  overscroll-behavior-y: none;
 }
-@media (prefers-color-scheme: dark) {
-  body {
-    background-color: #000;
-  }
-}`;
+`;

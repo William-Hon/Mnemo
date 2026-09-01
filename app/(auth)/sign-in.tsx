@@ -35,10 +35,10 @@ export default function SignInScreen() {
   };
 
   return (
-    <View className="flex-1 justify-center px-6 bg-gray-50 dark:bg-black">
+    <View className="flex-1 justify-center px-6 bg-black">
       <Text style={{ textShadowColor: 'rgba(59, 130, 246, 1)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 40 }} className="text-4xl font-normal mb-2 tracking-widest text-center text-blue-400">MNEMO</Text>
       <Pressable onPress={() => setShowAbout(true)} className="mb-10 items-center active:opacity-50">
-        <Text className="text-gray-500 dark:text-gray-400 text-[10px] tracking-widest uppercase font-medium underline">"What is MNEMO?"</Text>
+        <Text className="text-gray-400 text-[10px] tracking-widest uppercase font-medium underline">"What is MNEMO?"</Text>
       </Pressable>
 
       <Modal visible={showAbout} transparent animationType="fade">
@@ -62,13 +62,13 @@ export default function SignInScreen() {
       </Modal>
 
       {errorMsg ? (
-        <View className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 p-3 rounded-sm mb-4">
-          <Text className="text-red-600 dark:text-red-400 text-sm text-center font-medium">{errorMsg}</Text>
+        <View className="bg-red-950/30 border border-red-900/50 p-3 rounded-sm mb-4">
+          <Text className="text-red-400 text-sm text-center font-medium">{errorMsg}</Text>
         </View>
       ) : null}
 
       <TextInput
-        className="w-full bg-transparent p-4 rounded-sm border border-gray-200 dark:border-gray-800 mb-4 text-black dark:text-white"
+        className="w-full bg-transparent p-4 rounded-sm border border-gray-800 mb-4 text-white"
         style={Platform.OS === 'web' ? { WebkitBoxShadow: '0 0 0 1000px #000 inset', WebkitTextFillColor: '#fff', outlineStyle: 'none' } as any : undefined}
         placeholder="Email"
         placeholderTextColor="#9ca3af"
@@ -82,7 +82,7 @@ export default function SignInScreen() {
         editable={!loading}
       />
       <TextInput
-        className="w-full bg-transparent p-4 rounded-sm border border-gray-200 dark:border-gray-800 mb-8 text-black dark:text-white"
+        className="w-full bg-transparent p-4 rounded-sm border border-gray-800 mb-8 text-white"
         style={Platform.OS === 'web' ? { WebkitBoxShadow: '0 0 0 1000px #000 inset', WebkitTextFillColor: '#fff', outlineStyle: 'none' } as any : undefined}
         placeholder="Password"
         placeholderTextColor="#9ca3af"
@@ -113,7 +113,7 @@ export default function SignInScreen() {
 
       <Link href="/(auth)/sign-up" asChild>
         <Pressable className="items-center p-2 active:opacity-50" disabled={loading}>
-          <Text className="text-gray-500 dark:text-gray-400 font-medium">Don't have an account? Sign up</Text>
+          <Text className="text-gray-400 font-medium">Don't have an account? Sign up</Text>
         </Pressable>
       </Link>
     </View>
