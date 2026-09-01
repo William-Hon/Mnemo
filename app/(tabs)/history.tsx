@@ -96,24 +96,25 @@ const SimpleCalendar = ({
   );
 };
 
-export default function HistoryScreen() {
-  const ResponsiveModal = ({ visible, children }: any) => {
-    if (!visible) return null;
-    if (Platform.OS === 'web') {
-      return (
-        <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 9999 }} className="bg-black/60 items-center justify-center p-2 sm:p-4">
-          {children}
-        </View>
-      );
-    }
+const ResponsiveModal = ({ visible, children }: any) => {
+  if (!visible) return null;
+  if (Platform.OS === 'web') {
     return (
-      <Modal visible={visible} animationType="fade" transparent={true}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 bg-black/60 items-center justify-center p-2 sm:p-4">
-          {children}
-        </KeyboardAvoidingView>
-      </Modal>
+      <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 9999 }} className="bg-black/60 items-center justify-center p-2 sm:p-4">
+        {children}
+      </View>
     );
-  };
+  }
+  return (
+    <Modal visible={visible} animationType="fade" transparent={true}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 bg-black/60 items-center justify-center p-2 sm:p-4">
+        {children}
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+};
+
+export default function HistoryScreen() {
 
   const { height, width } = useWindowDimensions();
   const isMobile = width < 768;
