@@ -1,5 +1,5 @@
 import { useFonts } from 'expo-font';
-import { Stack, useRouter, useSegments, ThemeProvider, DarkTheme, Head } from 'expo-router';
+import { Stack, useRouter, useSegments, ThemeProvider, DarkTheme } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import '../global.css';
@@ -55,9 +55,6 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <Head>
-        <title>MNEMO</title>
-      </Head>
       <RootLayoutNav />
     </AuthProvider>
   );
