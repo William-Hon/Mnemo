@@ -98,6 +98,7 @@ const SimpleCalendar = ({
 
 export default function HistoryScreen() {
   const { height, width } = useWindowDimensions();
+  const isMobile = width < 768;
   const calendarScale = Math.min(1.2, Math.max(0.4, (height - 200) / 450));
   
   const [entries, setEntries] = useState<any[]>([]);
@@ -552,7 +553,6 @@ export default function HistoryScreen() {
   return (
     <SafeAreaView 
       className="flex-1 bg-gray-50 dark:bg-black"
-      style={Platform.OS === 'web' ? { height: '100vh' } as any : {}}
     >
       <ScrollView 
         className="flex-1"
@@ -600,8 +600,8 @@ export default function HistoryScreen() {
         )}
 
         {/* Search and Filters */}
-        <View className="flex-col lg:flex-row gap-3 mb-6 relative z-50 w-full">
-          <View className="flex-1 flex-row items-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-sm px-4 h-12 shadow-sm w-full">
+        <View style={{ flexDirection: isMobile ? 'column' : 'row', width: '100%' }} className="gap-3 mb-6 relative z-50">
+          <View style={{ flex: isMobile ? undefined : 1, width: '100%' }} className="flex-row items-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-sm px-4 h-12 shadow-sm">
             <SymbolView name={{ ios: 'magnifyingglass', android: 'search', web: 'search' } as any} tintColor="#9ca3af" size={20} />
             <TextInput
               className="flex-1 ml-3 text-gray-900 dark:text-white text-base h-full outline-none"
@@ -618,11 +618,12 @@ export default function HistoryScreen() {
             )}
           </View>
           
-          <View className="flex-row gap-3 relative z-50 w-full lg:w-auto">
-            <View className="relative z-50 flex-1 lg:flex-none">
+          <View className="flex-row gap-3 relative z-50" style={{ width: isMobile ? '100%' : 'auto' }}>
+            <View className="relative z-50" style={{ flex: isMobile ? 1 : undefined }}>
               <Pressable 
                 onPress={() => setShowDatePicker(!showDatePicker)}
-                className={`flex-1 lg:flex-none flex-row items-center justify-center bg-white dark:bg-gray-900 border px-2 sm:px-4 h-12 rounded-sm shadow-sm ${
+                style={{ flex: isMobile ? 1 : undefined, width: '100%' }}
+                className={`flex-row items-center justify-center bg-white dark:bg-gray-900 border px-2 sm:px-4 h-12 rounded-sm shadow-sm ${
                   startDate || endDate ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-800'
                 }`}
               >
@@ -685,7 +686,8 @@ export default function HistoryScreen() {
                   setSelectedIds(new Set(entries.map(e => e.entry_id || e.id)));
                 }
               }}
-              className={`flex-1 lg:flex-none flex-row items-center justify-center bg-white dark:bg-gray-900 border px-2 sm:px-4 h-12 rounded-sm shadow-sm ${
+              style={{ flex: isMobile ? 1 : undefined }}
+              className={`flex-row items-center justify-center bg-white dark:bg-gray-900 border px-2 sm:px-4 h-12 rounded-sm shadow-sm ${
                 selectedIds.size > 0 ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-800'
               }`}
             >
