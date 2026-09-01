@@ -572,10 +572,12 @@ export default function HistoryScreen() {
 
   return (
     <SafeAreaView 
-      className="flex-1 h-full bg-gray-50 dark:bg-black"
+      className="flex-1 bg-gray-50 dark:bg-black"
+      style={Platform.OS === 'web' ? { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } as any : {}}
     >
       <ScrollView 
         className="flex-1"
+        style={{ height: '100%' }}
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
         showsVerticalScrollIndicator={true}
         refreshControl={

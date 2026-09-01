@@ -22,7 +22,10 @@ export default function AboutScreen() {
   }) as any;
 
   return (
-    <View className="flex-1 h-full bg-gray-50 dark:bg-black">
+    <View 
+      className="flex-1 bg-gray-50 dark:bg-black"
+      style={Platform.OS === 'web' ? { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } as any : {}}
+    >
       <ScrollView 
         className="flex-1 h-full"
         contentContainerStyle={{ paddingTop: 40, paddingHorizontal: 24, paddingBottom: 40 }}
