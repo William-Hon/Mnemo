@@ -253,6 +253,7 @@ export default function HistoryScreen() {
       const response = await LocalAIService.chat(journalContext, newHistory, (text) => {
         // Stream the text into the placeholder
         setChatHistory(prev => {
+          if (prev.length === 0) return prev;
           const updated = [...prev];
           updated[updated.length - 1].content = text;
           return updated;
@@ -261,6 +262,7 @@ export default function HistoryScreen() {
       
       // Final overwrite just in case
       setChatHistory(prev => {
+        if (prev.length === 0) return prev;
         const updated = [...prev];
         updated[updated.length - 1].content = response;
         return updated;
@@ -864,7 +866,7 @@ export default function HistoryScreen() {
                 </Text>
 
                 {showChat && (
-                    <View className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800 pb-10">
+                    <View className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800 pb-4">
                       <View className="flex-row items-center gap-2 mb-6">
                         <View style={[Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }]}>
                           <SymbolView name={{ ios: 'brain.head.profile', android: 'psychology', web: 'psychology' } as any} tintColor="#3b82f6" size={20} />
@@ -895,30 +897,34 @@ export default function HistoryScreen() {
                           </View>
                         </View>
                       )}
-                      
-                      <View className="flex-row mt-4">
-                        <TextInput 
-                          className="flex-1 bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm px-4 py-3 text-gray-900 dark:text-white text-base min-h-[48px]"
-                          placeholder="Ask about this entry..."
-                          placeholderTextColor="#6b7280"
-                          value={chatInput}
-                          onChangeText={setChatInput}
-                          editable={!isChatThinking}
-                          multiline
-                          maxLength={500}
-                        />
-                        <Pressable 
-                          onPress={sendMessageToLLM}
-                          disabled={isChatThinking || !chatInput.trim()}
-                          className={`ml-3 justify-center items-center px-5 rounded-sm ${!chatInput.trim() || isChatThinking ? 'bg-gray-200 dark:bg-gray-800' : 'bg-blue-500 active:bg-blue-600'}`}
-                          style={(!chatInput.trim() || isChatThinking) ? [] : [Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }]}
-                        >
-                          <SymbolView name={{ ios: 'arrow.up', android: 'arrow_upward', web: 'arrow_upward' } as any} tintColor={!chatInput.trim() || isChatThinking ? '#9ca3af' : 'white'} size={20} />
-                        </Pressable>
-                      </View>
                     </View>
                 )}
               </ScrollView>
+              
+              {showChat && (
+                <View className="p-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 z-50">
+                  <View className="flex-row">
+                    <TextInput 
+                      className="flex-1 bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm px-4 py-3 text-gray-900 dark:text-white text-base min-h-[48px]"
+                      placeholder="Ask about this entry..."
+                      placeholderTextColor="#6b7280"
+                      value={chatInput}
+                      onChangeText={setChatInput}
+                      editable={!isChatThinking}
+                      multiline
+                      maxLength={500}
+                    />
+                    <Pressable 
+                      onPress={sendMessageToLLM}
+                      disabled={isChatThinking || !chatInput.trim()}
+                      className={`ml-3 justify-center items-center px-5 rounded-sm ${!chatInput.trim() || isChatThinking ? 'bg-gray-200 dark:bg-gray-800' : 'bg-blue-500 active:bg-blue-600'}`}
+                      style={(!chatInput.trim() || isChatThinking) ? [] : [Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }]}
+                    >
+                      <SymbolView name={{ ios: 'arrow.up', android: 'arrow_upward', web: 'arrow_upward' } as any} tintColor={!chatInput.trim() || isChatThinking ? '#9ca3af' : 'white'} size={20} />
+                    </Pressable>
+                  </View>
+                </View>
+              )}
             </View>
           </KeyboardAvoidingView>
         )}
