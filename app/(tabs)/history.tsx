@@ -97,6 +97,24 @@ const SimpleCalendar = ({
 };
 
 export default function HistoryScreen() {
+  const ResponsiveModal = ({ visible, children }: any) => {
+    if (!visible) return null;
+    if (Platform.OS === 'web') {
+      return (
+        <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 9999 }} className="bg-black/60 items-center justify-center p-2 sm:p-4">
+          {children}
+        </View>
+      );
+    }
+    return (
+      <Modal visible={visible} animationType="fade" transparent={true}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 bg-black/60 items-center justify-center p-2 sm:p-4">
+          {children}
+        </KeyboardAvoidingView>
+      </Modal>
+    );
+  };
+
   const { height, width } = useWindowDimensions();
   const isMobile = width < 768;
   const calendarScale = Math.min(1.2, Math.max(0.4, (height - 200) / 450));
@@ -554,7 +572,7 @@ export default function HistoryScreen() {
 
   return (
     <SafeAreaView 
-      className="flex-1 bg-gray-50 dark:bg-black"
+      className="flex-1 h-full bg-gray-50 dark:bg-black"
     >
       <ScrollView 
         className="flex-1"
@@ -780,9 +798,8 @@ export default function HistoryScreen() {
       </Modal>
 
       {/* Single Entry Reading Modal */}
-      <Modal visible={!!selectedEntryToRead} animationType="fade" transparent={true}>
+      <ResponsiveModal visible={!!selectedEntryToRead}>
         {selectedEntryToRead && (
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 bg-black/60 items-center justify-center p-2 sm:p-4">
             <View className="w-full max-w-2xl flex-1 max-h-[90%] sm:max-h-[85%] bg-white dark:bg-gray-900 rounded-sm shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
               <View className="flex-row justify-between items-center p-5 border-b border-gray-100 dark:border-gray-800">
                 <View className="flex-row gap-3">
@@ -926,9 +943,8 @@ export default function HistoryScreen() {
                 </View>
               )}
             </View>
-          </KeyboardAvoidingView>
         )}
-      </Modal>
+      </ResponsiveModal>
 
 
     </SafeAreaView>
