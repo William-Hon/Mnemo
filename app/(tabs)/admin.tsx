@@ -103,6 +103,22 @@ const ADMIN_TODOS: AdminTodo[] = [
     ],
   },
   {
+    id: 'ai_sanitize_exports',
+    title: 'AI Export Sanitization & PII Redaction',
+    category: 'Security',
+    priority: 'High',
+    status: 'In Architecture',
+    icon: { ios: 'shield.lefthalf.filled', android: 'verified_user', web: 'verified_user' },
+    shortDescription: 'Use on-device AI to sanitize, mask, and redact sensitive personal identifiers (names, locations, contact info) prior to exporting Context Briefs.',
+    whyItMatters: 'Users frequently export journals for external LLMs (Claude/ChatGPT) or healthcare providers. Automatic client-side AI redaction guarantees third parties never receive identifiable personal data.',
+    technicalBlueprint: [
+      'Local SLM Prompt Chaining: Pass decrypted export text through local Qwen3 with a structured PII extraction & entity masking prompt.',
+      'Deterministic Anonymizer: Replace names with consistent pseudonyms ([Person A], [Company X]) to preserve narrative coherence.',
+      'Pre-Export Redaction Preview: Allow user to review masked entities and toggle redactions before generating PDF/Context Brief.',
+      'Zero Cloud Leakage: Sanitization executes 100% locally on-device, preserving zero-knowledge guarantees.',
+    ],
+  },
+  {
     id: 'whats_next_popup',
     title: 'Add "What\'s Next" Pop-Up Announcement',
     category: 'Engagement',
@@ -436,7 +452,7 @@ export default function AdminScreen() {
             className={`flex-1 py-2 rounded-lg items-center ${activeTab === 'todos' ? 'bg-blue-600 shadow' : ''}`}
           >
             <Text className={`font-bold text-xs ${activeTab === 'todos' ? 'text-white' : 'text-gray-400'}`}>
-              To-Dos (6)
+              To-Dos ({ADMIN_TODOS.length})
             </Text>
           </Pressable>
         </View>
@@ -450,21 +466,27 @@ export default function AdminScreen() {
                   Roadmap Execution
                 </Text>
                 <Text className="text-xs font-bold text-gray-400">
-                  6 Strategic Initiatives
+                  {ADMIN_TODOS.length} Strategic Initiatives
                 </Text>
               </View>
 
               <View className="flex-row gap-2 mb-3">
                 <View className="flex-1 bg-black/50 p-2.5 rounded-xl border border-gray-800 items-center">
-                  <Text className="text-emerald-400 font-black text-base">1</Text>
+                  <Text className="text-emerald-400 font-black text-base">
+                    {ADMIN_TODOS.filter((t) => t.status === 'Active Preview').length}
+                  </Text>
                   <Text className="text-gray-400 text-[10px] uppercase font-bold">Active Preview</Text>
                 </View>
                 <View className="flex-1 bg-black/50 p-2.5 rounded-xl border border-gray-800 items-center">
-                  <Text className="text-purple-400 font-black text-base">3</Text>
+                  <Text className="text-purple-400 font-black text-base">
+                    {ADMIN_TODOS.filter((t) => t.status === 'In Architecture').length}
+                  </Text>
                   <Text className="text-gray-400 text-[10px] uppercase font-bold">Architecture</Text>
                 </View>
                 <View className="flex-1 bg-black/50 p-2.5 rounded-xl border border-gray-800 items-center">
-                  <Text className="text-blue-400 font-black text-base">2</Text>
+                  <Text className="text-blue-400 font-black text-base">
+                    {ADMIN_TODOS.filter((t) => t.status === 'Planned').length}
+                  </Text>
                   <Text className="text-gray-400 text-[10px] uppercase font-bold">Planned</Text>
                 </View>
               </View>

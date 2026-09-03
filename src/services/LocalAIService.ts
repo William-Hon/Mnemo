@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseUrl } from '../lib/supabase';
 
 // Lazy load mlc-ai/web-llm so we don't break native
 let webLLM: any = null;
@@ -43,7 +43,7 @@ class LocalAIServiceClass {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error('Not authenticated');
 
-    const response = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/private-ai-download-url`, {
+    const response = await fetch(`${supabaseUrl}/functions/v1/private-ai-download-url`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${session.access_token}`,
@@ -87,7 +87,7 @@ class LocalAIServiceClass {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/complete-private-ai-download`, {
+    await fetch(`${supabaseUrl}/functions/v1/complete-private-ai-download`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${session.access_token}`,

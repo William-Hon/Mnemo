@@ -6,7 +6,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as Clipboard from 'expo-clipboard';
 import { getUserEntries, searchEntries, deleteEntries, Entry } from '../../src/services/entries';
-import { LocalAIService, AnalysisResult } from '../../src/services/LocalAIService';
+import { LocalAIService } from '../../src/services/LocalAIService';
 import { useAuth } from '../../src/providers/AuthProvider';
 
 // --- Simple Calendar Component ---
@@ -494,79 +494,154 @@ export default function HistoryScreen() {
       }
     }
 
+    const numColumns = width < 520 
+      ? 1 
+      : width < 780 
+        ? 2 
+        : width < 1080 
+          ? 3 
+          : width < 1400 
+            ? 4 
+            : 5;
+    const gap = 32;
+    const currentContainerW = Math.min(width - 32, 1280);
+    const cardWidth = numColumns === 1 
+      ? Math.min(currentContainerW, 320)
+      : Math.floor((currentContainerW - (gap * (numColumns - 1))) / numColumns);
+
+    const cardFlexBasis = numColumns === 1 
+      ? (width < 520 ? '100%' : '320px')
+      : `calc(${(100 / numColumns).toFixed(3)}% - ${(gap * (numColumns - 1) / numColumns).toFixed(1)}px)`;
+
+    const maxTextLines = numColumns === 1 
+      ? (item.journalBrief ? 8 : 12)
+      : numColumns === 2 
+        ? (item.journalBrief ? 6 : 10)
+        : numColumns === 3 
+          ? (item.journalBrief ? 5 : 8)
+          : numColumns === 4 
+            ? (item.journalBrief ? 4 : 7)
+            : (item.journalBrief ? 3 : 6);
+
+    const neumorphicCardStyle = [
+      {
+        backgroundColor: isSelected ? '#121c33' : '#0d121d',
+        borderColor: isSelected ? 'rgba(96, 165, 250, 0.65)' : 'rgba(59, 130, 246, 0.25)',
+        shadowColor: '#3b82f6',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: isSelected ? 0.9 : 0.7,
+        shadowRadius: 22,
+        elevation: 8,
+        transform: [{ translateY: -3 }],
+      },
+      Platform.OS === 'web'
+        ? ({
+            width: cardFlexBasis as any,
+            aspectRatio: 1,
+            boxShadow: isSelected
+              ? '0 0 24px 4px rgba(96, 165, 250, 0.75), 0 0 48px 8px rgba(59, 130, 246, 0.55), 0 0 75px 12px rgba(37, 99, 235, 0.35), 0 16px 36px -4px rgba(0, 0, 0, 0.85), inset 0 1px 1px 0 rgba(191, 219, 254, 0.45)'
+              : '0 0 20px 3px rgba(59, 130, 246, 0.55), 0 0 42px 6px rgba(37, 99, 235, 0.38), 0 0 65px 8px rgba(29, 78, 216, 0.2), 0 14px 28px -4px rgba(0, 0, 0, 0.8), inset 0 1px 1px 0 rgba(255, 255, 255, 0.14)',
+            transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+          } as any)
+        : ({
+            width: cardWidth,
+            aspectRatio: 1,
+          } as any),
+    ];
+
     return (
-      <Pressable
+      <Pressable 
         onPress={() => setSelectedEntryToRead(item)}
         onLongPress={() => toggleBulkSelection(actualId)}
-        className={`bg-gray-900 p-4 rounded-sm shadow-sm border mb-4 ${
-          isSelected ? 'border-blue-500 bg-blue-900/20' : 'border-gray-800'
-        }`}
+        style={neumorphicCardStyle}
+        className="p-4 sm:p-5 rounded-[22px] border overflow-hidden justify-between active:scale-[0.99] active:opacity-95"
       >
-        <View className="flex-row justify-between items-start mb-3">
-          <View className="flex-row items-center gap-2 flex-wrap flex-1 pr-2">
-            {isSearchResult && (
-              <View className="bg-blue-900/30 px-2 py-0.5 rounded mr-1">
-                <Text className="text-blue-400 font-bold text-xs">
-                  #{item.finalRank} most relevant
-                </Text>
+        <View className="flex-1 overflow-hidden justify-between">
+          <View className="overflow-hidden">
+            <View className="flex-row justify-between items-start mb-2">
+              <View className="flex-row items-center gap-1.5 flex-wrap flex-1 pr-1.5">
+                {isSearchResult && (
+                  <View className="bg-blue-500/15 px-2 py-0.5 rounded-full mr-1 border border-blue-500/30">
+                    <Text className="text-blue-400 font-bold text-[10.5px]">
+                      #{item.finalRank}
+                    </Text>
+                  </View>
+                )}
+                <View className="flex-row items-center gap-1.5">
+                  <SymbolView 
+                    name={item.entry_type === 'voice' ? { ios: 'mic.fill', android: 'mic', web: 'mic' } as any : { ios: 'doc.text.fill', android: 'description', web: 'description' } as any} 
+                    tintColor="#94a3b8" 
+                    size={14} 
+                  />
+                  <Text className="text-slate-400 font-medium text-[11.5px]">
+                    {new Date(item.created_at).toLocaleDateString()}
+                  </Text>
+                </View>
               </View>
-            )}
-            <View className="flex-row items-center gap-1">
-              <SymbolView 
-                name={item.entry_type === 'voice' ? { ios: 'mic.fill', android: 'mic', web: 'mic' } as any : { ios: 'doc.text.fill', android: 'description', web: 'description' } as any} 
-                tintColor="#9ca3af" 
-                size={16} 
-              />
-              <Text className="text-gray-400 font-medium text-xs">
-                {new Date(item.created_at).toLocaleDateString()}
+
+              <Pressable onPress={() => toggleBulkSelection(actualId)} className="p-1 -mt-1 -mr-1 active:opacity-50">
+                <SymbolView 
+                  name={isSelected ? { ios: 'checkmark.square.fill', android: 'check_box', web: 'check_box' } as any : { ios: 'square', android: 'check_box_outline_blank', web: 'check_box_outline_blank' } as any} 
+                  tintColor={isSelected ? '#3b82f6' : '#4b5563'} 
+                  size={19} 
+                />
+              </Pressable>
+            </View>
+            
+            <Text 
+              className="text-slate-100 text-[13.5px] font-normal" 
+              numberOfLines={maxTextLines}
+              ellipsizeMode="tail"
+              style={[
+                { lineHeight: 20 },
+                Platform.OS === 'web' ? ({
+                  display: '-webkit-box',
+                  WebkitLineClamp: maxTextLines,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxHeight: maxTextLines * 20,
+                } as any) : undefined
+              ]}
+            >
+              {displayText}
+            </Text>
+          </View>
+
+          {item.journalBrief && (
+            <View 
+              style={[
+                {
+                  backgroundColor: '#070b12',
+                  borderColor: 'rgba(255, 255, 255, 0.04)',
+                },
+                Platform.OS === 'web' ? ({
+                  boxShadow: 'inset 0 2px 6px 0 rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.02)',
+                } as any) : undefined
+              ]}
+              className="mt-2.5 p-2.5 rounded-xl border gap-1"
+            >
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center gap-1">
+                  <SymbolView name={{ ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' } as any} tintColor="#3b82f6" size={12} />
+                  <Text className="text-[10.5px] font-bold text-gray-200 uppercase tracking-wider">Brief</Text>
+                </View>
+                {item.deepRelevance > 0 && (
+                  <Text className={`text-[8.5px] font-black tracking-widest uppercase px-1.5 py-0.5 rounded-full ${
+                    item.deepRelevance === 3 ? 'text-green-400 bg-green-950/40 border border-green-800/30' :
+                    item.deepRelevance === 2 ? 'text-blue-400 bg-blue-950/40 border border-blue-800/30' :
+                    'text-gray-400 bg-gray-800/40 border border-gray-700/30'
+                  }`}>
+                    {item.deepRelevance === 3 ? 'MATCH' : item.deepRelevance === 2 ? 'RELATED' : 'WEAK'}
+                  </Text>
+                )}
+              </View>
+              <Text className="text-gray-300 text-[11.5px] leading-snug font-normal" numberOfLines={2}>
+                {item.journalBrief}
               </Text>
             </View>
-          </View>
-
-          <Pressable onPress={() => toggleBulkSelection(actualId)} className="p-1 -mt-1 -mr-1 active:opacity-50">
-            <SymbolView 
-              name={isSelected ? { ios: 'checkmark.square.fill', android: 'check_box', web: 'check_box' } as any : { ios: 'square', android: 'check_box_outline_blank', web: 'check_box_outline_blank' } as any} 
-              tintColor={isSelected ? '#3b82f6' : '#4b5563'} 
-              size={22} 
-            />
-          </Pressable>
+          )}
         </View>
-        
-        <Text className="text-gray-200 text-base leading-relaxed" numberOfLines={4}>
-          {displayText}
-        </Text>
-
-        {item.journalBrief && (
-          <View className="mt-3 bg-black/50 p-3 rounded-sm border border-gray-800 gap-2">
-            <View className="flex-row items-center justify-between mb-1">
-              <View className="flex-row items-center gap-1.5">
-                <SymbolView name={{ ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' } as any} tintColor="#3b82f6" size={14} />
-                <Text className="text-xs font-bold text-gray-100 uppercase tracking-wider">Journal Brief</Text>
-              </View>
-              {item.deepRelevance > 0 && (
-                <Text className={`text-[10px] font-black tracking-widest uppercase px-2 py-0.5 rounded-sm ${
-                  item.deepRelevance === 3 ? 'text-green-400 bg-green-900/30' :
-                  item.deepRelevance === 2 ? 'text-blue-400 bg-blue-900/30' :
-                  'text-gray-400 bg-gray-800'
-                }`}>
-                  {item.deepRelevance === 3 ? 'DIRECT MATCH' : item.deepRelevance === 2 ? 'RELATED' : 'WEAK'}
-                </Text>
-              )}
-            </View>
-            <Text className="text-gray-400 text-sm leading-relaxed mb-2">
-              {item.journalBrief}
-            </Text>
-            
-            {item.relevantPart && item.relevantPart !== "null" && (
-              <View className="border-t border-gray-800 pt-2">
-                <Text className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Relevant Part</Text>
-                <Text className="text-gray-400 text-sm italic leading-relaxed">
-                  "{item.relevantPart}"
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
       </Pressable>
     );
   };
@@ -579,37 +654,53 @@ export default function HistoryScreen() {
       <ScrollView 
         className="flex-1"
         style={{ height: '100%' }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 100, alignItems: 'center' }}
         showsVerticalScrollIndicator={true}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        
+        <View className="w-full max-w-7xl self-center">
         {/* Top Header / Action Bar */}
         {selectedIds.size > 0 ? (
-          <View className="flex-row items-center justify-between bg-transparent p-3 mb-4 mt-8">
-            <Text className="text-gray-100 font-bold text-lg tracking-wider">
+          <View 
+            style={[
+              {
+                backgroundColor: '#0d121d',
+                borderColor: 'rgba(255, 255, 255, 0.05)',
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.5,
+                shadowRadius: 18,
+                elevation: 5,
+              },
+              Platform.OS === 'web' ? ({
+                boxShadow: '0 12px 32px -4px rgba(0, 0, 0, 0.65), inset 0 1px 0 0 rgba(255, 255, 255, 0.08), 0 0 20px -2px rgba(59, 130, 246, 0.05)',
+              } as any) : undefined
+            ]}
+            className="flex-row items-center justify-between border rounded-[22px] p-4 px-5 mb-5 mt-8"
+          >
+            <Text className="text-gray-100 font-bold text-base tracking-wider">
               {selectedIds.size} SELECTED
             </Text>
-            <View className="flex-row gap-4">
+            <View className="flex-row gap-3">
               <Pressable 
                 onPress={() => setSelectedIds(new Set())} 
-                className="flex-row items-center gap-2 active:opacity-50"
+                className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-xl active:bg-white/[0.06]"
               >
-                <SymbolView name={{ ios: 'xmark', android: 'close', web: 'close' } as any} tintColor="#6b7280" size={16} />
-                <Text className="text-gray-400 text-xs font-bold uppercase tracking-wider hidden sm:flex">Deselect All</Text>
+                <SymbolView name={{ ios: 'xmark', android: 'close', web: 'close' } as any} tintColor="#9ca3af" size={16} />
+                <Text className="text-gray-300 text-xs font-bold uppercase tracking-wider hidden sm:flex">Deselect All</Text>
               </Pressable>
               <Pressable 
                 onPress={confirmBulkExport} 
-                className="flex-row items-center gap-2 active:opacity-50"
+                className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 active:bg-blue-500/20"
               >
-                <SymbolView name={{ ios: 'square.and.arrow.up', android: 'share', web: 'share' } as any} tintColor="#6b7280" size={16} />
-                <Text className="text-gray-400 text-xs font-bold uppercase tracking-wider hidden sm:flex">Export All</Text>
+                <SymbolView name={{ ios: 'square.and.arrow.up', android: 'share', web: 'share' } as any} tintColor="#60a5fa" size={16} />
+                <Text className="text-blue-400 text-xs font-bold uppercase tracking-wider hidden sm:flex">Export All</Text>
               </Pressable>
               <Pressable 
                 onPress={confirmBulkDelete} 
-                className="flex-row items-center gap-2 active:opacity-50"
+                className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 active:bg-red-500/20"
               >
                 <SymbolView name={{ ios: 'trash', android: 'delete', web: 'delete' } as any} tintColor="#ef4444" size={16} />
                 <Text className="text-red-500 text-xs font-bold uppercase tracking-wider hidden sm:flex">Delete All</Text>
@@ -623,35 +714,70 @@ export default function HistoryScreen() {
         )}
 
         {/* Search and Filters */}
-        <View style={{ flexDirection: isMobile ? 'column' : 'row', width: '100%' }} className="gap-3 mb-6 relative z-50">
-          <View style={{ flex: isMobile ? undefined : 1, width: '100%' }} className="flex-row items-center bg-gray-900 border border-gray-800 rounded-sm px-4 h-12 shadow-sm">
+        <View style={{ flexDirection: isMobile ? 'column' : 'row', width: '100%', zIndex: 50 }} className="gap-3.5 mb-10 sm:mb-7 relative z-50">
+          <View 
+            style={[
+              {
+                flex: isMobile ? undefined : 1,
+                width: '100%',
+                height: 58,
+                backgroundColor: '#0d121d',
+                borderColor: 'rgba(255, 255, 255, 0.06)',
+                shadowColor: '#3b82f6',
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.15,
+                shadowRadius: 18,
+                elevation: 4,
+              },
+              Platform.OS === 'web' ? ({
+                boxShadow: '0 10px 28px -4px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.08), 0 0 20px -2px rgba(59, 130, 246, 0.08)',
+              } as any) : undefined
+            ]} 
+            className="flex-row items-center border rounded-2xl px-5 h-[58px] shadow-sm"
+          >
             <SymbolView name={{ ios: 'magnifyingglass', android: 'search', web: 'search' } as any} tintColor="#9ca3af" size={20} />
             <TextInput
-              className="flex-1 ml-3 text-white text-base h-full outline-none"
+              className="flex-1 ml-3 text-white text-base h-full outline-none font-normal"
               placeholder="Search journals"
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor="#6b7280"
               value={query}
               onChangeText={setQuery}
               style={Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}}
             />
             {query.length > 0 && (
-              <Pressable onPress={() => setQuery('')} className="p-1">
-                <SymbolView name={{ ios: 'xmark.circle.fill', android: 'cancel', web: 'cancel' } as any} tintColor="#9ca3af" size={16} />
+              <Pressable onPress={() => setQuery('')} className="p-1.5 active:opacity-50">
+                <SymbolView name={{ ios: 'xmark.circle.fill', android: 'cancel', web: 'cancel' } as any} tintColor="#9ca3af" size={18} />
               </Pressable>
             )}
           </View>
           
-          <View className="flex-row gap-3 relative z-50" style={{ width: isMobile ? '100%' : 'auto' }}>
+          <View className="flex-row gap-3.5 relative z-50" style={{ width: isMobile ? '100%' : 'auto' }}>
             <View className="relative z-50" style={{ flex: isMobile ? 1 : undefined }}>
               <Pressable 
                 onPress={() => setShowDatePicker(!showDatePicker)}
-                style={{ flex: isMobile ? 1 : undefined, width: '100%' }}
-                className={`flex-row items-center justify-center bg-gray-900 border px-2 sm:px-4 h-12 rounded-sm shadow-sm ${
-                  startDate || endDate ? 'border-blue-500 bg-blue-900/20' : 'border-gray-800'
-                }`}
+                style={[
+                  {
+                    flex: isMobile ? 1 : undefined,
+                    width: isMobile ? undefined : 'auto',
+                    height: 58,
+                    backgroundColor: startDate || endDate ? '#121c33' : '#0d121d',
+                    borderColor: startDate || endDate ? 'rgba(59, 130, 246, 0.45)' : 'rgba(255, 255, 255, 0.06)',
+                    shadowColor: startDate || endDate ? '#3b82f6' : '#000000',
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: startDate || endDate ? 0.3 : 0.45,
+                    shadowRadius: 16,
+                    elevation: 4,
+                  },
+                  Platform.OS === 'web' ? ({
+                    boxShadow: startDate || endDate
+                      ? '0 10px 28px -4px rgba(0, 0, 0, 0.6), 0 0 24px -2px rgba(59, 130, 246, 0.35), inset 0 1px 1px 0 rgba(147, 197, 253, 0.25)'
+                      : '0 10px 28px -4px rgba(0, 0, 0, 0.55), inset 0 1px 0 0 rgba(255, 255, 255, 0.08), 0 0 18px -2px rgba(59, 130, 246, 0.08)',
+                  } as any) : undefined
+                ]}
+                className="flex-row items-center justify-center border px-5 h-[58px] rounded-2xl active:bg-[#111728]"
               >
-                <SymbolView name={{ ios: 'calendar', android: 'calendar_today', web: 'calendar_today' } as any} tintColor={startDate || endDate ? '#3b82f6' : '#9ca3af'} size={18} />
-                <Text className={`ml-2 text-xs sm:text-sm font-bold ${startDate || endDate ? 'text-blue-400' : 'text-gray-400'}`}>
+                <SymbolView name={{ ios: 'calendar', android: 'calendar_today', web: 'calendar_today' } as any} tintColor={startDate || endDate ? '#3b82f6' : '#9ca3af'} size={19} />
+                <Text className={`ml-2.5 text-sm sm:text-base font-bold ${startDate || endDate ? 'text-blue-400' : 'text-gray-200'}`}>
                   Date Range
                 </Text>
               </Pressable>
@@ -659,11 +785,22 @@ export default function HistoryScreen() {
               {/* Simple Date Picker Dropdown */}
               {showDatePicker && (
                 <View 
-                  style={{ 
-                    transform: [{ scale: calendarScale }], 
-                    transformOrigin: 'top left' 
-                  } as any}
-                  className="absolute top-10 left-0 w-[280px] max-w-[90vw] bg-gray-900 rounded-sm shadow-xl border border-gray-800 p-3 z-50"
+                  style={[
+                    { 
+                      transform: [{ scale: calendarScale }], 
+                      transformOrigin: 'top left',
+                      backgroundColor: '#0a0e18',
+                      borderColor: 'rgba(255, 255, 255, 0.07)',
+                      shadowColor: '#000000',
+                      shadowOffset: { width: 0, height: 16 },
+                      shadowOpacity: 0.7,
+                      shadowRadius: 32,
+                    } as any,
+                    Platform.OS === 'web' ? ({
+                      boxShadow: '0 24px 50px -6px rgba(0, 0, 0, 0.85), inset 0 1px 0 0 rgba(255, 255, 255, 0.1), 0 0 24px -2px rgba(59, 130, 246, 0.06)',
+                    } as any) : undefined
+                  ]}
+                  className="absolute top-[66px] left-0 w-[280px] max-w-[90vw] rounded-[24px] shadow-2xl border p-4.5 z-50"
                 >
                   <SimpleCalendar tempStart={tempStart} setTempStart={setTempStart} tempEnd={tempEnd} setTempEnd={setTempEnd} />
                   
@@ -672,27 +809,27 @@ export default function HistoryScreen() {
                       value={tempStart} 
                       onChangeText={setTempStart} 
                       placeholder="Start Date (YYYY-MM-DD)" 
-                      placeholderTextColor="#9ca3af" 
-                      className="w-full bg-gray-800 p-2 text-xs rounded-sm text-white" 
+                      placeholderTextColor="#6b7280" 
+                      className="w-full bg-[#060910] border border-white/[0.06] p-2.5 text-xs rounded-xl text-white" 
                     />
                     <TextInput 
                       value={tempEnd} 
                       onChangeText={setTempEnd} 
                       placeholder="End Date (YYYY-MM-DD)" 
-                      placeholderTextColor="#9ca3af" 
-                      className="w-full bg-gray-800 p-2 text-xs rounded-sm text-white" 
+                      placeholderTextColor="#6b7280" 
+                      className="w-full bg-[#060910] border border-white/[0.06] p-2.5 text-xs rounded-xl text-white" 
                     />
                   </View>
 
-                  <View className="flex-row justify-between border-t border-gray-800 pt-3 mt-1">
-                    <Pressable onPress={clearDateFilter} className="px-3 py-1.5 bg-gray-800 rounded-sm">
+                  <View className="flex-row justify-between border-t border-white/[0.06] pt-3 mt-1">
+                    <Pressable onPress={clearDateFilter} className="px-3.5 py-1.5 bg-white/[0.06] rounded-xl active:bg-white/[0.1]">
                       <Text className="text-gray-300 text-xs font-bold">Clear</Text>
                     </Pressable>
                     <View className="flex-row gap-2">
-                      <Pressable onPress={() => setShowDatePicker(false)} className="px-3 py-1.5 rounded-sm">
+                      <Pressable onPress={() => setShowDatePicker(false)} className="px-3.5 py-1.5 rounded-xl">
                         <Text className="text-gray-500 text-xs font-bold">Cancel</Text>
                       </Pressable>
-                      <Pressable onPress={applyDateFilter} className="bg-blue-500 px-3 py-1.5 rounded-sm">
+                      <Pressable onPress={applyDateFilter} className="bg-blue-600 px-4 py-1.5 rounded-xl active:bg-blue-500 shadow-sm shadow-blue-500/30">
                         <Text className="text-white text-xs font-bold">Apply</Text>
                       </Pressable>
                     </View>
@@ -709,10 +846,26 @@ export default function HistoryScreen() {
                   setSelectedIds(new Set(entries.map(e => e.entry_id || e.id)));
                 }
               }}
-              style={{ flex: isMobile ? 1 : undefined }}
-              className={`flex-row items-center justify-center bg-gray-900 border px-2 sm:px-4 h-12 rounded-sm shadow-sm ${
-                selectedIds.size > 0 ? 'border-blue-500 bg-blue-900/20' : 'border-gray-800'
-              }`}
+              style={[
+                {
+                  flex: isMobile ? 1 : undefined,
+                  width: isMobile ? undefined : 'auto',
+                  height: 58,
+                  backgroundColor: selectedIds.size > 0 ? '#121c33' : '#0d121d',
+                  borderColor: selectedIds.size > 0 ? 'rgba(59, 130, 246, 0.45)' : 'rgba(255, 255, 255, 0.06)',
+                  shadowColor: selectedIds.size > 0 ? '#3b82f6' : '#000000',
+                  shadowOffset: { width: 0, height: 6 },
+                  shadowOpacity: selectedIds.size > 0 ? 0.3 : 0.45,
+                  shadowRadius: 16,
+                  elevation: 4,
+                },
+                Platform.OS === 'web' ? ({
+                  boxShadow: selectedIds.size > 0
+                    ? '0 10px 28px -4px rgba(0, 0, 0, 0.6), 0 0 24px -2px rgba(59, 130, 246, 0.35), inset 0 1px 1px 0 rgba(147, 197, 253, 0.25)'
+                    : '0 10px 28px -4px rgba(0, 0, 0, 0.55), inset 0 1px 0 0 rgba(255, 255, 255, 0.08), 0 0 18px -2px rgba(59, 130, 246, 0.08)',
+                } as any) : undefined
+              ]}
+              className="flex-row items-center justify-center border px-5 h-[58px] rounded-2xl active:bg-[#111728]"
             >
               <SymbolView 
                 name={{ 
@@ -721,9 +874,9 @@ export default function HistoryScreen() {
                   web: selectedIds.size > 0 ? 'check_circle' : 'check_circle_outline' 
                 } as any} 
                 tintColor={selectedIds.size > 0 ? '#3b82f6' : '#9ca3af'} 
-                size={18} 
+                size={19} 
               />
-              <Text className={`ml-2 text-xs sm:text-sm font-bold ${selectedIds.size > 0 ? 'text-blue-400' : 'text-gray-400'}`}>
+              <Text className={`ml-2.5 text-sm sm:text-base font-bold ${selectedIds.size > 0 ? 'text-blue-400' : 'text-gray-200'}`}>
                 {selectedIds.size > 0 ? 'Deselect All' : 'Select All'}
               </Text>
             </Pressable>
@@ -742,12 +895,21 @@ export default function HistoryScreen() {
             </Text>
           </View>
         ) : (
-          <View className="relative">
-            {entries.map((item, index) => (
-              <React.Fragment key={item.id}>
-                {renderItem({ item, index })}
-              </React.Fragment>
-            ))}
+          <View className="relative w-full pt-2 sm:pt-0">
+            <View 
+              style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                gap: 32,
+              }}
+              className="w-full"
+            >
+              {entries.map((item, index) => (
+                <React.Fragment key={item.id || item.entry_id}>
+                  {renderItem({ item, index })}
+                </React.Fragment>
+              ))}
+            </View>
             {loading && !refreshing && (
               <View className="absolute inset-0 bg-black/50 items-center justify-center z-50">
                 <ActivityIndicator size="large" color="#3b82f6" />
@@ -755,12 +917,29 @@ export default function HistoryScreen() {
             )}
           </View>
         )}
+        </View>
       </ScrollView>
 
       {/* Bulk Action Modal */}
       <Modal visible={!!confirmAction} transparent={true} animationType="fade">
-        <View className="flex-1 bg-black/60 items-center justify-center p-4">
-          <View className="bg-gray-900 w-full max-w-sm rounded-sm p-6 shadow-xl border border-gray-800">
+        <View className="flex-1 bg-black/80 items-center justify-center p-4">
+          <View 
+            style={[
+              {
+                backgroundColor: '#0a0e18',
+                borderColor: 'rgba(255, 255, 255, 0.07)',
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 16 },
+                shadowOpacity: 0.75,
+                shadowRadius: 36,
+                elevation: 8,
+              },
+              Platform.OS === 'web' ? ({
+                boxShadow: '0 28px 64px -8px rgba(0, 0, 0, 0.9), inset 0 1px 0 0 rgba(255, 255, 255, 0.1), 0 0 24px -2px rgba(59, 130, 246, 0.08)',
+              } as any) : undefined
+            ]}
+            className="w-full max-w-sm rounded-[24px] p-6 shadow-2xl border"
+          >
             <Text className="text-xl font-bold text-white mb-2 text-center">
               {confirmAction === 'delete' ? 'Delete Entries' : 'Export Entries'}
             </Text>
@@ -773,26 +952,26 @@ export default function HistoryScreen() {
             
             {confirmAction === 'delete' ? (
               <View className="flex-row gap-3">
-                <Pressable onPress={() => setConfirmAction(null)} className="flex-1 bg-gray-800 py-3 rounded-sm active:bg-gray-700">
+                <Pressable onPress={() => setConfirmAction(null)} className="flex-1 bg-slate-800/80 py-3 rounded-xl active:bg-slate-700">
                   <Text className="text-center font-bold text-gray-300">Cancel</Text>
                 </Pressable>
                 
-                <Pressable onPress={executeBulkAction} className="flex-1 bg-red-500 py-3 rounded-sm active:bg-red-600 shadow-sm shadow-red-500/20">
+                <Pressable onPress={executeBulkAction} className="flex-1 bg-red-500 py-3 rounded-xl active:bg-red-600 shadow-sm shadow-red-500/20">
                   <Text className="text-center font-bold text-white">Delete</Text>
                 </Pressable>
               </View>
             ) : (
               <View className="flex-col gap-3">
-                <Pressable onPress={executeBulkAction} className="w-full bg-blue-500 py-3.5 rounded-sm active:bg-blue-600 shadow-sm shadow-blue-500/20">
+                <Pressable onPress={executeBulkAction} className="w-full bg-blue-600 py-3.5 rounded-xl active:bg-blue-500 shadow-sm shadow-blue-500/20">
                   <Text className="text-center font-bold text-white">Generate PDF Document</Text>
                 </Pressable>
 
-                <Pressable onPress={executeBulkExportClipboard} className="w-full bg-gray-800 py-3.5 rounded-sm active:bg-gray-700">
+                <Pressable onPress={executeBulkExportClipboard} className="w-full bg-slate-800/80 border border-white/[0.08] py-3.5 rounded-xl active:bg-slate-700">
                   <Text className="text-center font-bold text-white">Copy Text to Clipboard</Text>
                 </Pressable>
 
-                <Pressable onPress={() => setConfirmAction(null)} className="w-full bg-gray-800 py-3.5 mt-2 rounded-sm active:bg-gray-700">
-                  <Text className="text-center font-bold text-gray-300">Cancel</Text>
+                <Pressable onPress={() => setConfirmAction(null)} className="w-full bg-slate-800/50 py-3.5 mt-2 rounded-xl active:bg-slate-700">
+                  <Text className="text-center font-bold text-gray-400">Cancel</Text>
                 </Pressable>
               </View>
             )}
@@ -803,15 +982,31 @@ export default function HistoryScreen() {
       {/* Single Entry Reading Modal */}
       <ResponsiveModal visible={!!selectedEntryToRead}>
         {selectedEntryToRead && (
-            <View className="w-full max-w-2xl flex-1 max-h-[90%] sm:max-h-[85%] bg-gray-900 rounded-sm shadow-2xl border border-gray-800 overflow-hidden">
-              <View className="flex-row justify-between items-center p-5 border-b border-gray-800">
+            <View 
+              style={[
+                {
+                  backgroundColor: '#0a0e18',
+                  borderColor: 'rgba(255, 255, 255, 0.07)',
+                  shadowColor: '#000000',
+                  shadowOffset: { width: 0, height: 20 },
+                  shadowOpacity: 0.8,
+                  shadowRadius: 40,
+                  elevation: 10,
+                },
+                Platform.OS === 'web' ? ({
+                  boxShadow: '0 32px 72px -8px rgba(0, 0, 0, 0.95), inset 0 1px 0 0 rgba(255, 255, 255, 0.1), 0 0 32px -4px rgba(59, 130, 246, 0.1)',
+                } as any) : undefined
+              ]}
+              className="w-full max-w-2xl flex-1 max-h-[90%] sm:max-h-[85%] rounded-[24px] shadow-2xl border overflow-hidden"
+            >
+              <View className="flex-row justify-between items-center p-5 border-b border-white/[0.08]">
                 <View className="flex-row gap-3">
                   <Pressable 
                     onPress={() => generateExport([selectedEntryToRead])} 
                     style={[
                       Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }
                     ]} 
-                    className="flex-row items-center gap-2 px-3 py-2 rounded-sm active:opacity-50"
+                    className="flex-row items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.08] active:opacity-50"
                   >
                     <SymbolView name={{ ios: 'square.and.arrow.up', android: 'ios_share', web: 'ios_share' } as any} tintColor="#ffffff" size={16} />
                     <Text style={{ color: '#ffffff' }} className="text-xs font-bold uppercase tracking-wider hidden sm:flex">Export</Text>
@@ -821,7 +1016,7 @@ export default function HistoryScreen() {
                     style={[
                       Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(239, 68, 68, 0.5))' } as any : { shadowColor: '#ef4444', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }
                     ]} 
-                    className="flex-row items-center gap-2 px-3 py-2 rounded-sm active:opacity-50"
+                    className="flex-row items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.08] active:opacity-50"
                   >
                     <SymbolView name={{ ios: 'trash', android: 'delete', web: 'delete' } as any} tintColor="#ef4444" size={16} />
                     <Text style={{ color: '#ef4444' }} className="text-xs font-bold uppercase tracking-wider hidden sm:flex">Delete</Text>
@@ -837,7 +1032,7 @@ export default function HistoryScreen() {
                         Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
                         !hasModel && { opacity: 0.5 }
                       ]} 
-                      className="flex-row items-center gap-2 px-3 py-2 rounded-sm active:opacity-50 ml-2"
+                      className="flex-row items-center gap-2 px-3 py-2 rounded-xl bg-blue-500/10 border border-blue-500/30 active:opacity-50 ml-2"
                     >
                       <SymbolView name={{ ios: 'brain.head.profile', android: 'psychology', web: 'psychology' } as any} tintColor="#3b82f6" size={16} />
                       <Text style={{ color: '#3b82f6' }} className="text-xs font-bold uppercase tracking-wider hidden sm:flex">Ask Private AI</Text>
@@ -862,7 +1057,7 @@ export default function HistoryScreen() {
                   style={[
                     Platform.OS === 'web' ? { filter: 'drop-shadow(0px 0px 8px rgba(59, 130, 246, 0.5))' } as any : { shadowColor: '#3b82f6', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }
                   ]} 
-                  className="p-2 rounded-sm active:opacity-50"
+                  className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] active:opacity-50"
                 >
                   <SymbolView name={{ ios: 'xmark', android: 'close', web: 'close' } as any} tintColor="#3b82f6" size={16} />
                 </Pressable>

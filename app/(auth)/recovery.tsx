@@ -144,12 +144,10 @@ export default function RecoveryScreen() {
       <Pressable onPress={handleBack} className="absolute top-12 left-6 active:opacity-50 p-2 z-10">
         <Text className="text-gray-400 text-xs font-bold tracking-widest uppercase">← Back</Text>
       </Pressable>
-
-      <Text className="text-4xl font-normal mb-10 tracking-widest text-center text-white mt-8">MNEMO</Text>
       
       {hasExistingKey ? (
         <>
-          <Text className="text-xl font-bold mb-4 text-center text-gray-200 uppercase tracking-widest">Unlock your journal</Text>
+          <Text className="text-[38px] font-bold mb-4 mt-8 text-center text-gray-100 uppercase tracking-wider">Unlock your journal</Text>
           <Text className="text-gray-400 mb-8 text-center leading-relaxed font-medium">
             Enter your encryption passphrase to unlock your journals on this device.
           </Text>
@@ -186,13 +184,15 @@ export default function RecoveryScreen() {
         </>
       ) : (
         <>
-          <Text className="text-xl font-bold mb-4 text-center text-gray-200 uppercase tracking-widest">Set Up Encryption</Text>
-          <Text 
-            style={{ textShadowColor: 'rgba(239, 68, 68, 0.3)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }} 
-            className="text-red-500 text-sm leading-relaxed font-normal text-center mb-8 px-2"
-          >
-            <Text className="font-bold">Critical Warning:</Text> This passphrase protects your journal encryption. <Text className="underline">MNEMO cannot access or recover it.</Text> If you lose it, your data cannot be recovered.
-          </Text>
+          <Text className="text-[38px] font-bold mb-4 mt-8 text-center text-gray-100 uppercase tracking-wider">Set Up Encryption</Text>
+          <View style={{ width: '70%', alignSelf: 'center', maxWidth: 640 }} className="mb-8 px-2">
+            <Text 
+              style={{ textShadowColor: 'rgba(239, 68, 68, 0.3)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }} 
+              className="text-red-500 text-sm leading-relaxed font-normal text-center"
+            >
+              <Text className="font-bold">Critical Warning:</Text> This passphrase protects the encryption key used to decrypt your journals. Only you can unlock your entries. Mnemo <Text className="underline font-bold">CANNOT</Text> access or recover your passphrase. If you lose your passphrase, your journals cannot be recovered.
+            </Text>
+          </View>
 
           <View className="w-full mb-4 relative justify-center">
             <TextInput

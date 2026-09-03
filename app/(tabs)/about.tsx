@@ -237,7 +237,7 @@ export default function AboutScreen() {
         <Pressable 
           onPress={() => toggleSection('voice')}
           style={Platform.OS === 'web' ? { boxShadow: '0 0 25px rgba(59, 130, 246, 0.6)' } as any : { shadowColor: '#3b82f6', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 20, elevation: 8 }}
-          className="mb-12 bg-transparent rounded-sm p-5 border border-blue-500"
+          className="mb-4 bg-transparent rounded-sm p-5 border border-blue-500"
         >
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-4 flex-1 pr-2">
@@ -287,6 +287,52 @@ export default function AboutScreen() {
               <Text className="text-gray-500 leading-relaxed text-sm mt-4 italic">
                 Whether a thought is typed or spoken, MNEMO turns it into one private, searchable memory bank.
               </Text>
+            </View>
+          )}
+        </Pressable>
+
+        {/* 5. What's Next in Mnemo */}
+        <Pressable 
+          onPress={() => toggleSection('whats_next')}
+          style={Platform.OS === 'web' ? { boxShadow: '0 0 25px rgba(59, 130, 246, 0.6)' } as any : { shadowColor: '#3b82f6', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 20, elevation: 8 }}
+          className="mb-12 bg-transparent rounded-sm p-5 border border-blue-500"
+        >
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center gap-4 flex-1 pr-2">
+              <SymbolView name={{ ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' } as any} tintColor="#3b82f6" size={24} style={iconGlowStyle} />
+              <Text className="text-lg font-bold text-white flex-1 flex-wrap">What's Next in Mnemo</Text>
+            </View>
+            <SymbolView name={{ ios: expandedSection === 'whats_next' ? 'chevron.up' : 'chevron.down', android: expandedSection === 'whats_next' ? 'expand_less' : 'expand_more', web: expandedSection === 'whats_next' ? 'expand_less' : 'expand_more' } as any} tintColor="#9ca3af" size={24} />
+          </View>
+          
+          {expandedSection === 'whats_next' && (
+            <View className="mt-5 pt-5 border-t border-gray-800">
+              <View className="flex-col gap-3 pl-1">
+                <View className="flex-row">
+                  <Text className="text-gray-500 mr-3 text-lg leading-6">•</Text>
+                  <Text className="text-gray-400 leading-relaxed text-base flex-1">
+                    <Text className="font-bold text-gray-300">Photo & Handwritten Notes:</Text> Take photos of paper journal entries, notebooks, or sticky notes. Mnemo will automatically read your handwriting and turn it into searchable digital entries.
+                  </Text>
+                </View>
+                <View className="flex-row">
+                  <Text className="text-gray-500 mr-3 text-lg leading-6">•</Text>
+                  <Text className="text-gray-400 leading-relaxed text-base flex-1">
+                    <Text className="font-bold text-gray-300">Daily Sparks & Reflection Prompts:</Text> Never get stuck staring at an empty screen. Helpful morning and evening prompts will spark new thoughts and bring up relevant reflections from your past.
+                  </Text>
+                </View>
+                <View className="flex-row">
+                  <Text className="text-gray-500 mr-3 text-lg leading-6">•</Text>
+                  <Text className="text-gray-400 leading-relaxed text-base flex-1">
+                    <Text className="font-bold text-gray-300">Smarter Search Algorithm:</Text> Ongoing improvements to how search works so it better understands the meaning behind your words, making it even easier to find past entries even if you don't remember the exact phrasing.
+                  </Text>
+                </View>
+                <View className="flex-row">
+                  <Text className="text-gray-500 mr-3 text-lg leading-6">•</Text>
+                  <Text className="text-gray-400 leading-relaxed text-base flex-1">
+                    <Text className="font-bold text-gray-300">Automatic Privacy Cleaning for Exports:</Text> When exporting entries to share with a therapist or outside AI tool, private AI will automatically detect and remove sensitive info like real names, phone numbers, and addresses so your personal details stay protected.
+                  </Text>
+                </View>
+              </View>
             </View>
           )}
         </Pressable>

@@ -47,7 +47,15 @@ export default function SignUpScreen() {
 
   return (
     <View className="flex-1 justify-center px-6 bg-black">
-      <Text style={{ textShadowColor: 'rgba(59, 130, 246, 1)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 40 }} className="text-4xl font-normal mb-2 tracking-widest text-center text-blue-400">MNEMO</Text>
+      <Text 
+        style={[
+          { textShadowColor: 'rgba(37, 99, 235, 1)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 35 },
+          Platform.OS === 'web' ? ({ filter: 'drop-shadow(0px 0px 14px rgba(37, 99, 235, 0.95))' } as any) : undefined,
+        ]} 
+        className="text-4xl font-normal mb-2 tracking-widest text-center text-blue-600"
+      >
+        MNEMO
+      </Text>
       <Pressable onPress={() => setShowAbout(true)} className="mb-10 items-center active:opacity-50">
         <Text className="text-gray-400 text-[10px] tracking-widest uppercase font-medium underline">"What is MNEMO?"</Text>
       </Pressable>
@@ -57,13 +65,13 @@ export default function SignUpScreen() {
           <View className="bg-gray-900 border border-gray-800 p-6 rounded-sm w-full max-w-sm">
             <Text className="text-xl font-bold mb-4 text-white uppercase tracking-widest">About MNEMO</Text>
             <Text className="text-gray-300 mb-4 leading-relaxed font-medium">
-              MNEMO is a privacy-first journal archive.
+              MNEMO is a <Text className="underline">privacy-first journal archive built for your most deeply personal thoughts.</Text>
             </Text>
             <Text className="text-gray-300 mb-4 leading-relaxed font-medium">
-              Rant freely. Your entries are encrypted, organized, and searchable by meaning (even if they’re messy).
+              <Text className="underline">Write freely.</Text> Your entries are encrypted and searchable by meaning, so even <Text className="underline">messy thoughts can be found later.</Text>
             </Text>
             <Text className="text-gray-300 mb-8 leading-relaxed font-medium">
-              Find specific memories later, then choose what to do with them: bring them to therapy, export them to AI for deeper analysis, or keep them completely private.
+              Export and share <Text className="underline">only what you want to</Text>, whether with a therapist, outside AI tools for deeper analysis, or no one at all.
             </Text>
             <Pressable onPress={() => setShowAbout(false)} className="py-2 items-center active:opacity-50">
               <Text style={{ textShadowColor: 'rgba(59, 130, 246, 0.8)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 16 }} className="text-blue-500 font-normal tracking-widest uppercase text-base">CLOSE</Text>

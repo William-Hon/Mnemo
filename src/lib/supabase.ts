@@ -64,8 +64,12 @@ const WebStorageAdapter = {
   },
 };
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+export const supabaseUrl =
+  process.env.EXPO_PUBLIC_SUPABASE_URL ||
+  'https://haaczqmyqgyqwcuvykuf.supabase.co';
+export const supabaseAnonKey =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhYWN6cW15cWd5cXdjdXZ5a3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTkwODgsImV4cCI6MjA5NDY5NTA4OH0.o1TJBBKq5wd9oblp2Pycy-p7nnYGlYJ8aiPlgNy8NKU';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

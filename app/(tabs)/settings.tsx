@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, SafeAreaView, ScrollView, Modal, Platform, Alert, ActivityIndicator } from 'react-native';
 import { useAuth } from '../../src/providers/AuthProvider';
-import { supabase } from '../../src/lib/supabase';
+import { supabase, supabaseUrl } from '../../src/lib/supabase';
 import { deleteLocalMEK } from '../../src/lib/encryption';
 import { LocalAIService } from '../../src/services/LocalAIService';
 import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
-import WhatsNextModal from '../../components/WhatsNextModal';
 
 export default function SettingsScreen() {
   const { user } = useAuth();
@@ -21,7 +20,6 @@ export default function SettingsScreen() {
   const [downloadLimit, setDownloadLimit] = useState<{used: number, total: number} | null>(null);
   const [showLimitInfo, setShowLimitInfo] = useState(false);
   const [showModelInfo, setShowModelInfo] = useState(false);
-  const [showWhatsNextModal, setShowWhatsNextModal] = useState(false);
   React.useEffect(() => {
     checkModelStatus();
   }, []);
@@ -97,7 +95,7 @@ export default function SettingsScreen() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const response = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/delete-account`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/delete-account`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -260,25 +258,6 @@ export default function SettingsScreen() {
           )}
         </View>
 
-        {/* Roadmap & What's Next */}
-        <View className="bg-gray-900 rounded-sm p-4 shadow-sm border border-gray-800 mb-6">
-          <Text className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Roadmap & Future</Text>
-          <Text className="text-gray-100 text-base mb-1">
-            What's Next in Mnemo
-          </Text>
-          <Text className="text-gray-500 text-xs mb-4 leading-relaxed">
-            Discover upcoming capabilities: encrypted vector vaults, handwritten OCR, and daily reflection sparks.
-          </Text>
-
-          <Pressable 
-            onPress={() => setShowWhatsNextModal(true)}
-            className="bg-blue-950/60 border border-blue-800/80 py-3 rounded-sm items-center active:opacity-60 flex-row justify-center gap-2"
-          >
-            <SymbolView name={{ ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' } as any} tintColor="#60a5fa" size={18} />
-            <Text className="text-blue-400 font-bold tracking-wider uppercase text-xs">View What's Next</Text>
-          </Pressable>
-        </View>
-
         <View className="bg-gray-900 rounded-sm p-4 shadow-sm border border-gray-800 mb-6">
           <Text className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Account</Text>
           <Text className="text-gray-100 text-base mb-1">
@@ -384,11 +363,6 @@ export default function SettingsScreen() {
           </View>
         </Modal>
       </View>
-
-      <WhatsNextModal
-        visible={showWhatsNextModal}
-        onClose={() => setShowWhatsNextModal(false)}
-      />
     </SafeAreaView>
   );
 }

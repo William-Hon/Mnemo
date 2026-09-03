@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { SymbolView } from 'expo-symbols';
 import { Tabs, useRouter } from 'expo-router';
 import { Platform, View, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -18,6 +19,8 @@ export default function TabLayout() {
   const { session } = useAuth();
   
   const isAdmin = session?.user?.email === '32whon@gmail.com';
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, Platform.OS === 'ios' ? 20 : 12);
 
   useEffect(() => {
     checkAuth();
@@ -56,9 +59,24 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: '#ffffff',
         tabBarInactiveTintColor: '#888888',
+        tabBarLabelPosition: 'beside-icon',
+        tabBarIconStyle: { display: 'none' },
         tabBarStyle: {
           backgroundColor: '#000000',
-          borderTopColor: '#333333',
+          borderTopColor: 'rgba(255, 255, 255, 0.12)',
+          borderTopWidth: 1,
+          height: 54 + bottomInset,
+          paddingBottom: bottomInset,
+          paddingTop: 8,
+        },
+        tabBarItemStyle: {
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        tabBarLabelStyle: {
+          fontSize: 14,
+          fontWeight: '600',
+          letterSpacing: 0.2,
         },
         sceneStyle: {
           backgroundColor: '#000000',
