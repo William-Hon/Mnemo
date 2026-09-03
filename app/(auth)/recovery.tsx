@@ -144,7 +144,6 @@ export default function RecoveryScreen() {
       <Pressable onPress={handleBack} className="absolute top-12 left-6 active:opacity-50 p-2 z-10">
         <Text className="text-gray-400 text-xs font-bold tracking-widest uppercase">← Back</Text>
       </Pressable>
-      
       {hasExistingKey ? (
         <>
           <Text className="text-[38px] font-bold mb-4 mt-8 text-center text-gray-100 uppercase tracking-wider">Unlock your journal</Text>
